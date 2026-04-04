@@ -1,8 +1,10 @@
+import { UserRole } from "src/const/const";
+
 export class User {
   id: string;
   login: string;
   password?: string;
-  role: 'admin' | 'editor' | 'viewer';
+  role: UserRole;
   createdAt: number;
   updatedAt: number;
 }

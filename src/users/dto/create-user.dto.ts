@@ -1,4 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { UserRole } from 'src/const/const';
 
 export class CreateUserDto {
   @IsString()
@@ -10,6 +11,6 @@ export class CreateUserDto {
   password: string;
 
   @IsOptional()
-  @IsEnum(['admin', 'editor', 'viewer'])
-  role?: 'admin' | 'editor' | 'viewer';
+  @IsEnum(UserRole)
+  role?: UserRole;
 }

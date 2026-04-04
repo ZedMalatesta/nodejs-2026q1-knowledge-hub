@@ -4,10 +4,11 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DbService } from '../db/db.service';
 import { User } from './entities/user.entity';
+import { UserRole } from 'src/const/const';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly db: DbService) {}
+  constructor(private readonly db: DbService) { }
 
   findAll() {
     return this.db.users.map(u => {
@@ -31,7 +32,7 @@ export class UsersService {
       id: uuidv4(),
       login: createUserDto.login,
       password: createUserDto.password,
-      role: createUserDto.role || 'viewer',
+      role: createUserDto.role || UserRole.VIEWER,
       createdAt: now,
       updatedAt: now,
     };
@@ -53,7 +54,7 @@ export class UsersService {
     }
     user.password = updateUserDto.newPassword;
     user.updatedAt = Date.now();
-    
+
     const { password, ...rest } = user;
     return rest;
   }
