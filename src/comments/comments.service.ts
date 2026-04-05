@@ -12,6 +12,14 @@ export class CommentsService {
     return this.db.comments.filter(c => c.articleId === articleId);
   }
 
+  findOne(id: string) {
+    const comment = this.db.comments.find(c => c.id === id);
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+    return comment;
+  }
+
   create(createCommentDto: CreateCommentDto) {
     const articleExists = this.db.articles.some(a => a.id === createCommentDto.articleId);
     if (!articleExists) {
