@@ -11,17 +11,19 @@ import { DbService } from '../db/db.service';
 import { User } from './entities/user.entity';
 import { UserRole } from 'src/const/const';
 import { paginate } from '../utils/pagination';
+import { sortData } from '../utils/sort';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly db: DbService) {}
 
-  findAll(page?: string, limit?: string) {
-    const data = this.db.users.map((u) => {
+  findAll(page?: string, limit?: string, sortBy?: string, order?: string) {
+    let data = this.db.users.map((u) => {
       const { ...rest } = u;
       delete rest.password;
       return rest;
     });
+    data = sortData(data, sortBy, order);
     return paginate(data, page, limit);
   }
 

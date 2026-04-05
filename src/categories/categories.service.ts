@@ -5,13 +5,16 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { DbService } from '../db/db.service';
 import { Category } from './entities/category.entity';
 import { paginate } from '../utils/pagination';
+import { sortData } from '../utils/sort';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly db: DbService) {}
 
-  findAll(page?: string, limit?: string) {
-    return paginate(this.db.categories, page, limit);
+  findAll(page?: string, limit?: string, sortBy?: string, order?: string) {
+    let data = this.db.categories;
+    data = sortData(data, sortBy, order);
+    return paginate(data, page, limit);
   }
 
   findOne(id: string) {

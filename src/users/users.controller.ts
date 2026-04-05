@@ -28,8 +28,10 @@ export class UsersController {
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('order') order?: string,
   ) {
-    return this.usersService.findAll(page, limit);
+    return this.usersService.findAll(page, limit, sortBy, order);
   }
 
   @Get(':id')

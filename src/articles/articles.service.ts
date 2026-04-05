@@ -6,12 +6,13 @@ import { DbService } from '../db/db.service';
 import { Article } from './entities/article.entity';
 import { ArticleStatus } from 'src/const/const';
 import { paginate } from '../utils/pagination';
+import { sortData } from '../utils/sort';
 
 @Injectable()
 export class ArticlesService {
   constructor(private readonly db: DbService) {}
 
-  findAll(status?: ArticleStatus, categoryId?: string, tag?: string, page?: string, limit?: string) {
+  findAll(status?: ArticleStatus, categoryId?: string, tag?: string, page?: string, limit?: string, sortBy?: string, order?: string) {
     let articles = this.db.articles;
 
     if (status) {
@@ -26,6 +27,7 @@ export class ArticlesService {
       articles = articles.filter((a) => a.tags.includes(tag));
     }
 
+    articles = sortData(articles, sortBy, order);
     return paginate(articles, page, limit);
   }
 

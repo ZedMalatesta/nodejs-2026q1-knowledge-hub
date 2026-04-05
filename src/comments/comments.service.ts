@@ -8,13 +8,15 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { DbService } from '../db/db.service';
 import { Comment } from './entities/comment.entity';
 import { paginate } from '../utils/pagination';
+import { sortData } from '../utils/sort';
 
 @Injectable()
 export class CommentsService {
   constructor(private readonly db: DbService) {}
 
-  findAll(articleId: string, page?: string, limit?: string) {
-    const data = this.db.comments.filter((c) => c.articleId === articleId);
+  findAll(articleId: string, page?: string, limit?: string, sortBy?: string, order?: string) {
+    let data = this.db.comments.filter((c) => c.articleId === articleId);
+    data = sortData(data, sortBy, order);
     return paginate(data, page, limit);
   }
 
