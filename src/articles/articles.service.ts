@@ -12,7 +12,15 @@ import { sortData } from '../utils/sort';
 export class ArticlesService {
   constructor(private readonly db: DbService) {}
 
-  findAll(status?: ArticleStatus, categoryId?: string, tag?: string, page?: string, limit?: string, sortBy?: string, order?: string) {
+  findAll(
+    status?: ArticleStatus,
+    categoryId?: string,
+    tag?: string,
+    page?: string,
+    limit?: string,
+    sortBy?: string,
+    order?: string,
+  ) {
     let articles = this.db.articles;
 
     if (status) {

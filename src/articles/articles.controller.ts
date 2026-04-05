@@ -39,7 +39,15 @@ export class ArticlesController {
     @Query('sortBy') sortBy?: string,
     @Query('order') order?: string,
   ) {
-    return this.articlesService.findAll(status, categoryId, tag, page, limit, sortBy, order);
+    return this.articlesService.findAll(
+      status,
+      categoryId,
+      tag,
+      page,
+      limit,
+      sortBy,
+      order,
+    );
   }
 
   @Get(':id')

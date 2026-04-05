@@ -14,7 +14,13 @@ import { sortData } from '../utils/sort';
 export class CommentsService {
   constructor(private readonly db: DbService) {}
 
-  findAll(articleId: string, page?: string, limit?: string, sortBy?: string, order?: string) {
+  findAll(
+    articleId: string,
+    page?: string,
+    limit?: string,
+    sortBy?: string,
+    order?: string,
+  ) {
     let data = this.db.comments.filter((c) => c.articleId === articleId);
     data = sortData(data, sortBy, order);
     return paginate(data, page, limit);
