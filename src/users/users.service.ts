@@ -65,5 +65,11 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
     this.db.users.splice(index, 1);
+
+    this.db.articles.forEach(article => {
+      if (article.authorId === id) {
+        article.authorId = null;
+      }
+    });
   }
 }
