@@ -11,4 +11,3 @@ export class DbService {
   categories: Category[] = [];
   comments: Comment[] = [];
 }
-

@@ -8,28 +8,28 @@ import { ArticleStatus } from 'src/const/const';
 
 @Injectable()
 export class ArticlesService {
-  constructor(private readonly db: DbService) { }
+  constructor(private readonly db: DbService) {}
 
   findAll(status?: ArticleStatus, categoryId?: string, tag?: string) {
     let articles = this.db.articles;
 
     if (status) {
-      articles = articles.filter(a => a.status === status);
+      articles = articles.filter((a) => a.status === status);
     }
 
     if (categoryId) {
-      articles = articles.filter(a => a.categoryId === categoryId);
+      articles = articles.filter((a) => a.categoryId === categoryId);
     }
 
     if (tag) {
-      articles = articles.filter(a => a.tags.includes(tag));
+      articles = articles.filter((a) => a.tags.includes(tag));
     }
 
     return articles;
   }
 
   findOne(id: string) {
-    const article = this.db.articles.find(a => a.id === id);
+    const article = this.db.articles.find((a) => a.id === id);
     if (!article) {
       throw new NotFoundException('Article not found');
     }
@@ -54,7 +54,7 @@ export class ArticlesService {
   }
 
   update(id: string, updateArticleDto: UpdateArticleDto) {
-    const article = this.db.articles.find(a => a.id === id);
+    const article = this.db.articles.find((a) => a.id === id);
     if (!article) {
       throw new NotFoundException('Article not found');
     }
@@ -65,11 +65,11 @@ export class ArticlesService {
   }
 
   remove(id: string) {
-    const index = this.db.articles.findIndex(a => a.id === id);
+    const index = this.db.articles.findIndex((a) => a.id === id);
     if (index === -1) {
       throw new NotFoundException('Article not found');
     }
     this.db.articles.splice(index, 1);
-    this.db.comments = this.db.comments.filter(c => c.articleId !== id);
+    this.db.comments = this.db.comments.filter((c) => c.articleId !== id);
   }
 }

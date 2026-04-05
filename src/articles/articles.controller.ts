@@ -18,7 +18,7 @@ import { ArticleStatus } from 'src/const/const';
 
 @Controller('article')
 export class ArticlesController {
-  constructor(private readonly articlesService: ArticlesService) { }
+  constructor(private readonly articlesService: ArticlesService) {}
 
   @Get()
   findAll(

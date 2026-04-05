@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { DbService } from '../db/db.service';
@@ -6,14 +10,14 @@ import { Comment } from './entities/comment.entity';
 
 @Injectable()
 export class CommentsService {
-  constructor(private readonly db: DbService) { }
+  constructor(private readonly db: DbService) {}
 
   findAll(articleId: string) {
-    return this.db.comments.filter(c => c.articleId === articleId);
+    return this.db.comments.filter((c) => c.articleId === articleId);
   }
 
   findOne(id: string) {
-    const comment = this.db.comments.find(c => c.id === id);
+    const comment = this.db.comments.find((c) => c.id === id);
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
@@ -21,7 +25,9 @@ export class CommentsService {
   }
 
   create(createCommentDto: CreateCommentDto) {
-    const articleExists = this.db.articles.some(a => a.id === createCommentDto.articleId);
+    const articleExists = this.db.articles.some(
+      (a) => a.id === createCommentDto.articleId,
+    );
     if (!articleExists) {
       throw new UnprocessableEntityException('Article not found');
     }
@@ -39,7 +45,7 @@ export class CommentsService {
   }
 
   remove(id: string) {
-    const index = this.db.comments.findIndex(c => c.id === id);
+    const index = this.db.comments.findIndex((c) => c.id === id);
     if (index === -1) {
       throw new NotFoundException('Comment not found');
     }

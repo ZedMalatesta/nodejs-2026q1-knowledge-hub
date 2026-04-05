@@ -1,4 +1,4 @@
-import { UserRole } from "src/const/const";
+import { UserRole } from 'src/const/const';
 
 export class User {
   id: string;

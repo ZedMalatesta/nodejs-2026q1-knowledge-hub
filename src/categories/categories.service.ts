@@ -7,14 +7,14 @@ import { Category } from './entities/category.entity';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly db: DbService) { }
+  constructor(private readonly db: DbService) {}
 
   findAll() {
     return this.db.categories;
   }
 
   findOne(id: string) {
-    const category = this.db.categories.find(c => c.id === id);
+    const category = this.db.categories.find((c) => c.id === id);
     if (!category) {
       throw new NotFoundException('Category not found');
     }
@@ -32,7 +32,7 @@ export class CategoriesService {
   }
 
   update(id: string, updateCategoryDto: UpdateCategoryDto) {
-    const category = this.db.categories.find(c => c.id === id);
+    const category = this.db.categories.find((c) => c.id === id);
     if (!category) {
       throw new NotFoundException('Category not found');
     }
@@ -42,13 +42,13 @@ export class CategoriesService {
   }
 
   remove(id: string) {
-    const index = this.db.categories.findIndex(c => c.id === id);
+    const index = this.db.categories.findIndex((c) => c.id === id);
     if (index === -1) {
       throw new NotFoundException('Category not found');
     }
     this.db.categories.splice(index, 1);
 
-    this.db.articles.forEach(article => {
+    this.db.articles.forEach((article) => {
       if (article.categoryId === id) {
         article.categoryId = null;
       }
