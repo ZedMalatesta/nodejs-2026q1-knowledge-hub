@@ -14,12 +14,18 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('category')
 @Controller('category')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
+  @ApiQuery({ name: 'page', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: String })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'order', required: false, type: String })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,

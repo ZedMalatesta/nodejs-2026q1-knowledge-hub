@@ -13,7 +13,9 @@ import {
 } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('comment')
 @Controller('comment')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
@@ -24,6 +26,11 @@ export class CommentsController {
   }
 
   @Get()
+  @ApiQuery({ name: 'articleId', required: true, type: String })
+  @ApiQuery({ name: 'page', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: String })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'order', required: false, type: String })
   findAll(
     @Query('articleId') articleId?: string,
     @Query('page') page?: string,

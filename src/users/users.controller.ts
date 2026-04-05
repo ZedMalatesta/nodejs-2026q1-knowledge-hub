@@ -15,6 +15,9 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
+
+@ApiTags('user')
 @Controller('user')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -25,6 +28,10 @@ export class UsersController {
   }
 
   @Get()
+  @ApiQuery({ name: 'page', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: String })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'order', required: false, type: String })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
