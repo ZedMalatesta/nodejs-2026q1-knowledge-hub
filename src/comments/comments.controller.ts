@@ -24,11 +24,15 @@ export class CommentsController {
   }
 
   @Get()
-  findAll(@Query('articleId') articleId?: string) {
+  findAll(
+    @Query('articleId') articleId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     if (!articleId) {
       throw new BadRequestException('articleId query parameter is required');
     }
-    return this.commentsService.findAll(articleId);
+    return this.commentsService.findAll(articleId, page, limit);
   }
 
   @Get(':id')

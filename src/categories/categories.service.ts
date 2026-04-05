@@ -4,13 +4,14 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { DbService } from '../db/db.service';
 import { Category } from './entities/category.entity';
+import { paginate } from '../utils/pagination';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly db: DbService) {}
 
-  findAll() {
-    return this.db.categories;
+  findAll(page?: string, limit?: string) {
+    return paginate(this.db.categories, page, limit);
   }
 
   findOne(id: string) {

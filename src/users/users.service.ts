@@ -10,17 +10,19 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { DbService } from '../db/db.service';
 import { User } from './entities/user.entity';
 import { UserRole } from 'src/const/const';
+import { paginate } from '../utils/pagination';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly db: DbService) {}
 
-  findAll() {
-    return this.db.users.map((u) => {
+  findAll(page?: string, limit?: string) {
+    const data = this.db.users.map((u) => {
       const { ...rest } = u;
       delete rest.password;
       return rest;
     });
+    return paginate(data, page, limit);
   }
 
   findOne(id: string) {

@@ -25,8 +25,10 @@ export class ArticlesController {
     @Query('status') status?: ArticleStatus,
     @Query('categoryId') categoryId?: string,
     @Query('tag') tag?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.articlesService.findAll(status, categoryId, tag);
+    return this.articlesService.findAll(status, categoryId, tag, page, limit);
   }
 
   @Get(':id')
