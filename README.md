@@ -40,6 +40,12 @@ npm run test
 To run only one of all test suites
 
 ```
+npm run test:custom
+```
+
+To run custom tests required for hacker score
+
+```
 npm run test -- <path to suite>
 ```
 
