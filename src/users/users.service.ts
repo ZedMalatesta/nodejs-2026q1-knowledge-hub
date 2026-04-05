@@ -71,5 +71,7 @@ export class UsersService {
         article.authorId = null;
       }
     });
+
+    this.db.comments = this.db.comments.filter(c => c.authorId !== id);
   }
 }

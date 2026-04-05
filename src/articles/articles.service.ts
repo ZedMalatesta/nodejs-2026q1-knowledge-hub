@@ -70,5 +70,6 @@ export class ArticlesService {
       throw new NotFoundException('Article not found');
     }
     this.db.articles.splice(index, 1);
+    this.db.comments = this.db.comments.filter(c => c.articleId !== id);
   }
 }
