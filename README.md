@@ -35,6 +35,12 @@ Before running the application for the first time or after changing the Prisma s
 npm run prisma:migrate
 ```
 
+To seed the database with initial data:
+
+```bash
+npx prisma db seed
+```
+
 
 ## Running application
 
