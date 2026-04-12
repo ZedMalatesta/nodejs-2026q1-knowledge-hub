@@ -17,6 +17,17 @@ git clone {repository URL}
 npm install
 ```
 
+## Configuration
+
+The application requires environment variables. Create a `.env` file in the root directory by copying the example file:
+
+```bash
+cp .env.example .env
+```
+
+Ensure you update the values in `.env` to match your local environment, especially for database credentials and security keys.
+
+
 ## Running application
 
 ```
