@@ -1,10 +1,7 @@
-dist/
 node_modules
+!node_modules/.prisma
+!node_modules/@prisma/client
+dist
 .env
-.env.example
 .git
-.gitignore
-logs/
-*.log
-.vscode/
-.idea/
+npm-debug.log

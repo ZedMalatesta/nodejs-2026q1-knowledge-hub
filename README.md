@@ -32,13 +32,13 @@ Ensure you update the values in `.env` to match your local environment, especial
 Before running the application for the first time or after changing the Prisma schema, run the migrations to sync the database:
 
 ```bash
-npm run prisma:migrate
+npm run db:migrate
 ```
 
 To seed the database with initial data:
 
 ```bash
-npx prisma db seed
+npm run db:seed
 ```
 
 
@@ -131,6 +131,12 @@ npm run docker:down
 After startup, the API will be available at http://localhost:4000.
 The database is available internally at `localhost:5432`.
 Adminer (Database UI) is available at http://localhost:8080.
+
+**Note:** When running in Docker, the `DATABASE_URL` in your `.env` should use `db` as the hostname:
+`postgresql://postgres:postgres@db:5432/knowledge_hub?schema=public`
+
+When running locally, use `localhost`:
+`postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public`
 
 ### Security Scanning
 
