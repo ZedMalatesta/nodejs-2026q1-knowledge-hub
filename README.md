@@ -26,6 +26,14 @@ cp .env.example .env
 ```
 
 Ensure you update the values in `.env` to match your local environment, especially for database credentials and security keys.
+  
+## Database Migrations
+
+Before running the application for the first time or after changing the Prisma schema, run the migrations to sync the database:
+
+```bash
+npm run prisma:migrate
+```
 
 
 ## Running application
