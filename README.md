@@ -88,3 +88,35 @@ npm run format
 Press <kbd>F5</kbd> to debug.
 
 For more information, visit: https://code.visualstudio.com/docs/editor/debugging
+
+## Docker
+
+To run the application in Docker:
+
+```bash
+npm run docker:run
+```
+
+To stop the application in Docker:
+
+```bash
+npm run docker:down
+```
+
+After startup, the API will be available at http://localhost:4000.
+The database is available internally at `localhost:5432`.
+Adminer (Database UI) is available at http://localhost:8080.
+
+### Security Scanning
+
+Scan for vulnerabilities using:
+```bash
+npm run docker:scan:scout
+# OR
+npm run docker:scan:trivy
+```
+
+### Docker Hub
+
+The Docker image for this application can be found at: 
+[https://hub.docker.com/r/1111zedda/nodejs-2026q1-knowledge-hub-app](https://hub.docker.com/r/1111zedda/nodejs-2026q1-knowledge-hub-app)
