@@ -13,6 +13,12 @@ enum Role {
   VIEWER
 }
 
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
   id        String    @id @default(uuid())
   login     String    @unique
@@ -22,12 +28,6 @@ model User {
   updatedAt DateTime  @updatedAt
   articles  Article[]
   comments  Comment[]
-}
-
-enum ArticleStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
 }
 
 model Article {
@@ -43,6 +43,10 @@ model Article {
   categoryId String?
   comments   Comment[]
   tags       Tag[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([authorId])
 }
 
 model Category {
@@ -56,14 +60,19 @@ model Comment {
   id        String   @id @default(uuid())
   content   String
   createdAt DateTime @default(now())
-  author     User?    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId   String?
-  article    Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  articleId  String
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String?
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId String
+
+  @@index([articleId])
+  @@index([authorId])
 }
 
 model Tag {
   id       String    @id @default(uuid())
   name     String    @unique
   articles Article[]
+
+  @@index([name])
 }
