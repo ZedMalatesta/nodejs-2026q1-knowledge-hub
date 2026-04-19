@@ -59,7 +59,7 @@ export class AuthService {
       throw new ForbiddenException('Authentication failed');
     }
 
-    const payload = { userId: user.id, login: user.login };
+    const payload = { userId: user.id, login: user.login, role: user.role };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_SECRET,
@@ -91,7 +91,7 @@ export class AuthService {
         throw new ForbiddenException('Authentication failed');
       }
 
-      const newPayload = { userId: user.id, login: user.login };
+      const newPayload = { userId: user.id, login: user.login, role: user.role };
 
       const accessToken = await this.jwtService.signAsync(newPayload, {
         secret: process.env.JWT_SECRET,
