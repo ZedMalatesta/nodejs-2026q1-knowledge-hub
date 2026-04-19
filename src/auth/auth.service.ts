@@ -8,6 +8,8 @@ import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
+  private readonly blacklistedTokens = new Set<string>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -78,6 +80,10 @@ export class AuthService {
   }
 
   async refresh(refreshDto: RefreshDto) {
+    if (this.blacklistedTokens.has(refreshDto.refreshToken)) {
+      throw new ForbiddenException('Authentication failed');
+    }
+
     try {
       const payload = await this.jwtService.verifyAsync(refreshDto.refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
@@ -110,5 +116,10 @@ export class AuthService {
     } catch (e) {
       throw new ForbiddenException('Authentication failed');
     }
+  }
+
+  async logout(refreshDto: RefreshDto) {
+    this.blacklistedTokens.add(refreshDto.refreshToken);
+    return { message: 'Logged out successfully' };
   }
 }

@@ -38,4 +38,13 @@ export class AuthController {
     }
     return this.authService.refresh({ refreshToken: body.refreshToken } as RefreshDto);
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Body() body: Record<string, any>) {
+    if (!body || typeof body.refreshToken !== 'string' || !body.refreshToken) {
+      throw new UnauthorizedException('Invalid DTO');
+    }
+    return this.authService.logout({ refreshToken: body.refreshToken } as RefreshDto);
+  }
 }
