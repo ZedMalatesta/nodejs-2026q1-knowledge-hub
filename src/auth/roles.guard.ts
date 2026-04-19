@@ -36,23 +36,23 @@ export class RolesGuard implements CanActivate {
     const method = request.method;
     const path = request.route.path; // e.g. '/article', '/article/:id'
 
-    if (role === 'admin') {
+    if (role === 'ADMIN') {
       return true;
     }
 
-    if (role === 'viewer') {
+    if (role === 'VIEWER') {
       if (method === 'GET') {
         return true;
       }
       throw new ForbiddenException('Viewers have read-only access');
     }
 
-    if (role === 'editor') {
+    if (role === 'EDITOR') {
       if (method === 'GET') {
         return true;
       }
 
-      if (path.startsWith('/category') || path.startsWith('/users')) {
+      if (path.startsWith('/category') || path.startsWith('/user')) {
         throw new ForbiddenException('Editors cannot manage categories or users');
       }
 
