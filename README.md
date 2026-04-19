@@ -26,6 +26,20 @@ cp .env.example .env
 ```
 
 Ensure you update the values in `.env` to match your local environment, especially for database credentials and security keys.
+  
+## Database Migrations
+
+Before running the application for the first time or after changing the Prisma schema, run the migrations to sync the database:
+
+```bash
+npm run db:migrate
+```
+
+To seed the database with initial data:
+
+```bash
+npm run db:seed
+```
 
 
 ## Running application
@@ -117,6 +131,12 @@ npm run docker:down
 After startup, the API will be available at http://localhost:4000.
 The database is available internally at `localhost:5432`.
 Adminer (Database UI) is available at http://localhost:8080.
+
+**Note:** When running in Docker, the `DATABASE_URL` in your `.env` should use `db` as the hostname:
+`postgresql://postgres:postgres@db:5432/knowledge_hub?schema=public`
+
+When running locally, use `localhost`:
+`postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public`
 
 ### Security Scanning
 
