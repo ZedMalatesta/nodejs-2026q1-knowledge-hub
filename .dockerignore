@@ -1,0 +1,7 @@
+node_modules
+!node_modules/.prisma
+!node_modules/@prisma/client
+dist
+.env
+.git
+npm-debug.log
