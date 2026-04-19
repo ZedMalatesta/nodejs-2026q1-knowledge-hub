@@ -29,25 +29,25 @@ export class RolesGuard implements CanActivate {
     const user = request.user;
     
     if (!user) {
-      return false; // Let JwtAuthGuard handle 401
+      return false;
     }
 
     const role = user.role;
     const method = request.method;
-    const path = request.route.path; // e.g. '/article', '/article/:id'
+    const path = request.route.path;
 
-    if (role === 'ADMIN') {
+    if (role === 'admin') {
       return true;
     }
 
-    if (role === 'VIEWER') {
+    if (role === 'viewer') {
       if (method === 'GET') {
         return true;
       }
       throw new ForbiddenException('Viewers have read-only access');
     }
 
-    if (role === 'EDITOR') {
+    if (role === 'editor') {
       if (method === 'GET') {
         return true;
       }

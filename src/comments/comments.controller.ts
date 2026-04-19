@@ -52,6 +52,6 @@ export class CommentsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
-    this.commentsService.remove(id);
+    return this.commentsService.remove(id);
   }
 }

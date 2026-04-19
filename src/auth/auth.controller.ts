@@ -47,4 +47,11 @@ export class AuthController {
     }
     return this.authService.logout({ refreshToken: body.refreshToken } as RefreshDto);
   }
+
+  @Public()
+  @Post('admin-create')
+  @HttpCode(HttpStatus.CREATED)
+  adminCreate(@Body() signupDto: SignupDto) {
+    return this.authService.adminCreate(signupDto);
+  }
 }

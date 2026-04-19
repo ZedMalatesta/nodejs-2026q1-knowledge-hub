@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +33,7 @@ export class AuthService {
       data: {
         login,
         password: hashedPassword,
+        role: Role.viewer,
       },
     });
 
@@ -121,5 +123,30 @@ export class AuthService {
   async logout(refreshDto: RefreshDto) {
     this.blacklistedTokens.add(refreshDto.refreshToken);
     return { message: 'Logged out successfully' };
+  }
+
+  async adminCreate(signupDto: SignupDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { login: signupDto.login },
+    });
+
+    if (existing) {
+      if (existing.role === Role.admin) {
+        return { id: existing.id, login: existing.login, role: existing.role };
+      }
+      throw new BadRequestException('Login already taken');
+    }
+
+    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        login: signupDto.login,
+        password: hashedPassword,
+        role: Role.admin,
+      },
+    });
+
+    return { id: user.id, login: user.login, role: 'admin' };
   }
 }
