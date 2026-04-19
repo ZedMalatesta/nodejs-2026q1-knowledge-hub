@@ -17,6 +17,31 @@ git clone {repository URL}
 npm install
 ```
 
+## Configuration
+
+The application requires environment variables. Create a `.env` file in the root directory by copying the example file:
+
+```bash
+cp .env.example .env
+```
+
+Ensure you update the values in `.env` to match your local environment, especially for database credentials and security keys.
+  
+## Database Migrations
+
+Before running the application for the first time or after changing the Prisma schema, run the migrations to sync the database:
+
+```bash
+npm run db:migrate
+```
+
+To seed the database with initial data:
+
+```bash
+npm run db:seed
+```
+
+
 ## Running application
 
 ```
@@ -35,6 +60,12 @@ To run all tests without authorization
 
 ```
 npm run test
+```
+
+To run custom tests required for hacker score
+
+```
+npm run test:custom
 ```
 
 To run only one of all test suites
@@ -82,3 +113,41 @@ npm run format
 Press <kbd>F5</kbd> to debug.
 
 For more information, visit: https://code.visualstudio.com/docs/editor/debugging
+
+## Docker
+
+To run the application in Docker:
+
+```bash
+npm run docker:run
+```
+
+To stop the application in Docker:
+
+```bash
+npm run docker:down
+```
+
+After startup, the API will be available at http://localhost:4000.
+The database is available internally at `localhost:5432`.
+Adminer (Database UI) is available at http://localhost:8080.
+
+**Note:** When running in Docker, the `DATABASE_URL` in your `.env` should use `db` as the hostname:
+`postgresql://postgres:postgres@db:5432/knowledge_hub?schema=public`
+
+When running locally, use `localhost`:
+`postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public`
+
+### Security Scanning
+
+Scan for vulnerabilities using:
+```bash
+npm run docker:scan:scout
+# OR
+npm run docker:scan:trivy
+```
+
+### Docker Hub
+
+The Docker image for this application can be found at: 
+[https://hub.docker.com/r/1111zedda/nodejs-2026q1-knowledge-hub-app](https://hub.docker.com/r/1111zedda/nodejs-2026q1-knowledge-hub-app)

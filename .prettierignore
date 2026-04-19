@@ -1,0 +1,5 @@
+# Ignore folders:
+dist
+node_modules
+test
+doc
