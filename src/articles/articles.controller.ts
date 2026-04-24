@@ -10,12 +10,14 @@ import {
   Put,
   Delete,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleStatus } from 'src/const/const';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 
 @ApiTags('article')
 @Controller('article')
@@ -57,7 +59,11 @@ export class ArticlesController {
 
   @Post()
   @HttpCode(201)
-  create(@Body() createArticleDto: CreateArticleDto) {
+  create(@Body() createArticleDto: CreateArticleDto, @Req() req: Request) {
+    const user = (req as any).user;
+    if (user?.role === 'editor') {
+      createArticleDto.authorId = user.userId;
+    }
     return this.articlesService.create(createArticleDto);
   }
 

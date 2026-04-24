@@ -10,10 +10,12 @@ import {
   BadRequestException,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 
 @ApiTags('comment')
 @Controller('comment')
@@ -21,7 +23,11 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
-  create(@Body() createCommentDto: CreateCommentDto) {
+  create(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
+    const user = (req as any).user;
+    if (user?.role === 'editor') {
+      createCommentDto.authorId = user.userId;
+    }
     return this.commentsService.create(createCommentDto);
   }
 

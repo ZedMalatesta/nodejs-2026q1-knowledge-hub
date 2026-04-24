@@ -8,8 +8,9 @@ RUN npm ci
 # Copy the whole project (including the locally generated Prisma client which was un-ignored in .dockerignore)
 COPY . .
 
-# We skip npx prisma generate here because it's already pre-generated locally 
-# and copied via the previous step.
+# Generate Prisma client for the Docker environment
+RUN npx prisma generate
+
 RUN npm run build
 
 FROM node:24-alpine

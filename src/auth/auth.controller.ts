@@ -39,6 +39,7 @@ export class AuthController {
     return this.authService.refresh({ refreshToken: body.refreshToken } as RefreshDto);
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(@Body() body: Record<string, any>) {
