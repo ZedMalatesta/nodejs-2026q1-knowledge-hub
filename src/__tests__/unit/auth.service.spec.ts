@@ -46,8 +46,12 @@ describe('AuthService', () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       vi.mocked(bcrypt.hash as any).mockResolvedValue('hashed_pw');
       mockPrisma.user.create.mockResolvedValue({
-        id: 'uuid-1', login: 'alice', password: 'hashed_pw', role: Role.viewer,
-        createdAt: new Date(), updatedAt: new Date(),
+        id: 'uuid-1',
+        login: 'alice',
+        password: 'hashed_pw',
+        role: Role.viewer,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       await service.signup({ login: 'alice', password: 'plaintext' });
@@ -59,11 +63,18 @@ describe('AuthService', () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       vi.mocked(bcrypt.hash as any).mockResolvedValue('hashed_pw');
       mockPrisma.user.create.mockResolvedValue({
-        id: 'uuid-1', login: 'alice', password: 'hashed_pw', role: Role.viewer,
-        createdAt: new Date(), updatedAt: new Date(),
+        id: 'uuid-1',
+        login: 'alice',
+        password: 'hashed_pw',
+        role: Role.viewer,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
-      const result = await service.signup({ login: 'alice', password: 'plaintext' });
+      const result = await service.signup({
+        login: 'alice',
+        password: 'plaintext',
+      });
 
       expect(result).not.toHaveProperty('password');
       expect(result).toHaveProperty('id', 'uuid-1');
@@ -74,8 +85,12 @@ describe('AuthService', () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       vi.mocked(bcrypt.hash as any).mockResolvedValue('hashed_pw');
       mockPrisma.user.create.mockResolvedValue({
-        id: 'uuid-1', login: 'alice', password: 'hashed_pw', role: Role.viewer,
-        createdAt: new Date(), updatedAt: new Date(),
+        id: 'uuid-1',
+        login: 'alice',
+        password: 'hashed_pw',
+        role: Role.viewer,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       await service.signup({ login: 'alice', password: 'pass' });
@@ -98,10 +113,15 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should return accessToken and refreshToken on valid credentials', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'uuid-1', login: 'alice', password: 'hashed', role: Role.editor,
+        id: 'uuid-1',
+        login: 'alice',
+        password: 'hashed',
+        role: Role.editor,
       });
       vi.mocked(bcrypt.compare as any).mockResolvedValue(true);
-      mockJwt.signAsync.mockResolvedValueOnce('access_tok').mockResolvedValueOnce('refresh_tok');
+      mockJwt.signAsync
+        .mockResolvedValueOnce('access_tok')
+        .mockResolvedValueOnce('refresh_tok');
 
       const result = await service.login({ login: 'alice', password: 'pass' });
 
@@ -111,7 +131,10 @@ describe('AuthService', () => {
 
     it('should include userId, login and role in the JWT payload', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'uuid-1', login: 'alice', password: 'hashed', role: Role.editor,
+        id: 'uuid-1',
+        login: 'alice',
+        password: 'hashed',
+        role: Role.editor,
       });
       vi.mocked(bcrypt.compare as any).mockResolvedValue(true);
       mockJwt.signAsync.mockResolvedValue('tok');
@@ -127,28 +150,40 @@ describe('AuthService', () => {
     it('should throw ForbiddenException when user does not exist', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.login({ login: 'nobody', password: 'pass' })).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.login({ login: 'nobody', password: 'pass' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException when password is incorrect', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'uuid-1', login: 'alice', password: 'hashed',
+        id: 'uuid-1',
+        login: 'alice',
+        password: 'hashed',
       });
       vi.mocked(bcrypt.compare as any).mockResolvedValue(false);
 
-      await expect(service.login({ login: 'alice', password: 'wrong' })).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.login({ login: 'alice', password: 'wrong' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('refresh', () => {
     it('should return a new token pair for a valid refresh token', async () => {
-      mockJwt.verifyAsync.mockResolvedValue({ userId: 'u1', login: 'alice', role: 'editor' });
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', login: 'alice', role: Role.editor });
-      mockJwt.signAsync.mockResolvedValueOnce('new_access').mockResolvedValueOnce('new_refresh');
+      mockJwt.verifyAsync.mockResolvedValue({
+        userId: 'u1',
+        login: 'alice',
+        role: 'editor',
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        login: 'alice',
+        role: Role.editor,
+      });
+      mockJwt.signAsync
+        .mockResolvedValueOnce('new_access')
+        .mockResolvedValueOnce('new_refresh');
 
       const result = await service.refresh({ refreshToken: 'valid_tok' });
 
@@ -158,7 +193,11 @@ describe('AuthService', () => {
 
     it('should verify using the refresh token secret', async () => {
       mockJwt.verifyAsync.mockResolvedValue({ userId: 'u1' });
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', login: 'alice', role: Role.viewer });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        login: 'alice',
+        role: Role.viewer,
+      });
       mockJwt.signAsync.mockResolvedValue('tok');
 
       await service.refresh({ refreshToken: 'rt' });
@@ -170,9 +209,9 @@ describe('AuthService', () => {
     it('should throw ForbiddenException when the JWT signature is invalid', async () => {
       mockJwt.verifyAsync.mockRejectedValue(new Error('invalid signature'));
 
-      await expect(service.refresh({ refreshToken: 'tampered' })).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.refresh({ refreshToken: 'tampered' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException when the token is expired', async () => {
@@ -180,16 +219,18 @@ describe('AuthService', () => {
       err.name = 'TokenExpiredError';
       mockJwt.verifyAsync.mockRejectedValue(err);
 
-      await expect(service.refresh({ refreshToken: 'expired' })).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.refresh({ refreshToken: 'expired' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException when the user was deleted after the token was issued', async () => {
       mockJwt.verifyAsync.mockResolvedValue({ userId: 'deleted' });
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.refresh({ refreshToken: 'valid' })).rejects.toThrow(ForbiddenException);
+      await expect(service.refresh({ refreshToken: 'valid' })).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -203,9 +244,9 @@ describe('AuthService', () => {
     it('should blacklist the token so refresh is rejected without verifying', async () => {
       await service.logout({ refreshToken: 'used_tok' });
 
-      await expect(service.refresh({ refreshToken: 'used_tok' })).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.refresh({ refreshToken: 'used_tok' }),
+      ).rejects.toThrow(ForbiddenException);
       expect(mockJwt.verifyAsync).not.toHaveBeenCalled();
     });
 
@@ -213,7 +254,11 @@ describe('AuthService', () => {
       await service.logout({ refreshToken: 'tok_a' });
 
       mockJwt.verifyAsync.mockResolvedValue({ userId: 'u1' });
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', login: 'alice', role: Role.viewer });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        login: 'alice',
+        role: Role.viewer,
+      });
       mockJwt.signAsync.mockResolvedValue('new_tok');
 
       await service.refresh({ refreshToken: 'tok_b' });
@@ -226,29 +271,48 @@ describe('AuthService', () => {
     it('should create a new user with admin role', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       vi.mocked(bcrypt.hash as any).mockResolvedValue('hashed');
-      mockPrisma.user.create.mockResolvedValue({ id: 'u2', login: 'admin', role: Role.admin });
+      mockPrisma.user.create.mockResolvedValue({
+        id: 'u2',
+        login: 'admin',
+        role: Role.admin,
+      });
 
-      const result = await service.adminCreate({ login: 'admin', password: 'secret' });
+      const result = await service.adminCreate({
+        login: 'admin',
+        password: 'secret',
+      });
 
       expect(result).toHaveProperty('role', 'admin');
-      expect(mockPrisma.user.create.mock.calls[0][0].data.role).toBe(Role.admin);
+      expect(mockPrisma.user.create.mock.calls[0][0].data.role).toBe(
+        Role.admin,
+      );
     });
 
     it('should return the existing admin without recreating when login already exists', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', login: 'admin', role: Role.admin });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        login: 'admin',
+        role: Role.admin,
+      });
 
-      const result = await service.adminCreate({ login: 'admin', password: 'any' });
+      const result = await service.adminCreate({
+        login: 'admin',
+        password: 'any',
+      });
 
       expect(result).toHaveProperty('login', 'admin');
       expect(mockPrisma.user.create).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when login belongs to a non-admin user', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u3', role: Role.editor });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u3',
+        role: Role.editor,
+      });
 
-      await expect(service.adminCreate({ login: 'editor', password: 'pass' })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.adminCreate({ login: 'editor', password: 'pass' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

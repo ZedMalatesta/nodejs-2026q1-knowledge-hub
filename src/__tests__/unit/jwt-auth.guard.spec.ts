@@ -13,10 +13,12 @@ const mockReflector = {
   getAllAndOverride: vi.fn(),
 };
 
-function makeContext(overrides: {
-  authorization?: string;
-  isPublic?: boolean;
-} = {}) {
+function makeContext(
+  overrides: {
+    authorization?: string;
+    isPublic?: boolean;
+  } = {},
+) {
   mockReflector.getAllAndOverride.mockReturnValue(overrides.isPublic ?? false);
 
   const request = {
@@ -60,12 +62,20 @@ describe('JwtAuthGuard', () => {
   });
 
   it('should attach the decoded payload to request.user on a valid token', async () => {
-    mockJwt.verifyAsync.mockResolvedValue({ userId: 'u1', login: 'alice', role: 'viewer' });
+    mockJwt.verifyAsync.mockResolvedValue({
+      userId: 'u1',
+      login: 'alice',
+      role: 'viewer',
+    });
     const ctx = makeContext({ authorization: 'Bearer valid_token' });
 
     await guard.canActivate(ctx);
 
-    expect(ctx._request.user).toEqual({ userId: 'u1', login: 'alice', role: 'viewer' });
+    expect(ctx._request.user).toEqual({
+      userId: 'u1',
+      login: 'alice',
+      role: 'viewer',
+    });
   });
 
   it('should throw UnauthorizedException when Authorization header is missing', async () => {
