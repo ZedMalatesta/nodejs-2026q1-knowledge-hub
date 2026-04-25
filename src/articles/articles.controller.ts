@@ -6,7 +6,6 @@ import {
   Param,
   HttpCode,
   Query,
-  ParseUUIDPipe,
   Put,
   Delete,
   HttpStatus,
@@ -18,6 +17,7 @@ import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleStatus } from 'src/const/const';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { ParseUuidPipe } from 'src/pipes/parse-uuid.pipe';
 
 @ApiTags('article')
 @Controller('article')
@@ -53,7 +53,7 @@ export class ArticlesController {
   }
 
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  findOne(@Param('id', new ParseUuidPipe()) id: string) {
     return this.articlesService.findOne(id);
   }
 
@@ -69,7 +69,7 @@ export class ArticlesController {
 
   @Put(':id')
   update(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUuidPipe()) id: string,
     @Body() updateArticleDto: UpdateArticleDto,
   ) {
     return this.articlesService.update(id, updateArticleDto);
@@ -77,7 +77,7 @@ export class ArticlesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  remove(@Param('id', new ParseUuidPipe()) id: string) {
     return this.articlesService.remove(id);
   }
 }

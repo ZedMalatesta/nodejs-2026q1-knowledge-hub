@@ -6,12 +6,12 @@ import {
   Param,
   Delete,
   Query,
-  ParseUUIDPipe,
   BadRequestException,
   HttpCode,
   HttpStatus,
   Req,
 } from '@nestjs/common';
+import { ParseUuidPipe } from 'src/pipes/parse-uuid.pipe';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -51,13 +51,13 @@ export class CommentsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  findOne(@Param('id', new ParseUuidPipe()) id: string) {
     return this.commentsService.findOne(id);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  remove(@Param('id', new ParseUuidPipe()) id: string) {
     return this.commentsService.remove(id);
   }
 }
