@@ -6,6 +6,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { STATUS_CODES } from 'http';
+import { AppError } from '../errors/http.errors';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -22,13 +24,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     this.logger.error(
       `Unhandled exception on ${request.method} ${request.url}: ${message}`,
-      stack,
+      stack ?? 'No stack trace available',
     );
+
+    if (exception instanceof AppError) {
+      const { statusCode } = exception;
+      response.status(statusCode).json({
+        statusCode,
+        error: STATUS_CODES[statusCode] ?? 'Error',
+        message: exception.message,
+      });
+      return;
+    }
 
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      message: 'Internal server error',
-      path: request.url,
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred',
     });
   }
 }
