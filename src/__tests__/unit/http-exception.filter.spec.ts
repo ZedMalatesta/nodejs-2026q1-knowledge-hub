@@ -53,7 +53,10 @@ describe('HttpExceptionFilter', () => {
 
     expect(host._status).toHaveBeenCalledWith(403);
     expect(host._json).toHaveBeenCalledWith(
-      expect.objectContaining({ statusCode: 403, message: 'Viewers have read-only access' }),
+      expect.objectContaining({
+        statusCode: 403,
+        message: 'Viewers have read-only access',
+      }),
     );
   });
 
@@ -63,7 +66,10 @@ describe('HttpExceptionFilter', () => {
 
     expect(host._status).toHaveBeenCalledWith(404);
     expect(host._json).toHaveBeenCalledWith(
-      expect.objectContaining({ statusCode: 404, message: 'Article not found' }),
+      expect.objectContaining({
+        statusCode: 404,
+        message: 'Article not found',
+      }),
     );
   });
 
@@ -91,7 +97,10 @@ describe('HttpExceptionFilter', () => {
 
     expect(host._status).toHaveBeenCalledWith(429);
     expect(host._json).toHaveBeenCalledWith(
-      expect.objectContaining({ statusCode: 429, message: 'Too Many Requests' }),
+      expect.objectContaining({
+        statusCode: 429,
+        message: 'Too Many Requests',
+      }),
     );
   });
 });
