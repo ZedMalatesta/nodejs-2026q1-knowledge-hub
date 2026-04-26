@@ -4,6 +4,8 @@ import {
   Injectable,
   LogLevel,
 } from '@nestjs/common';
+import { join } from 'path';
+import { FileRotatingWriter } from './file-rotating-writer';
 
 const LEVEL_HIERARCHY: LogLevel[] = [
   'error',
@@ -23,9 +25,15 @@ export function getLogLevels(level: string): LogLevel[] {
 @Injectable()
 export class AppLogger extends ConsoleLogger {
   private readonly isProd = process.env.NODE_ENV === 'production';
+  private readonly fileWriter: FileRotatingWriter;
 
   constructor(context?: string, options?: ConsoleLoggerOptions) {
     super(context ?? '', options ?? {});
+    const maxKb = parseInt(process.env.LOG_MAX_FILE_SIZE ?? '1024', 10);
+    this.fileWriter = new FileRotatingWriter(
+      join(process.cwd(), 'logs'),
+      maxKb,
+    );
   }
 
   log(message: any, context?: string): void {
@@ -33,6 +41,7 @@ export class AppLogger extends ConsoleLogger {
     this.isProd
       ? this.writeJson('log', message, context)
       : super.log(message, context);
+    this.writeFile('log', message, context);
   }
 
   warn(message: any, context?: string): void {
@@ -40,6 +49,7 @@ export class AppLogger extends ConsoleLogger {
     this.isProd
       ? this.writeJson('warn', message, context)
       : super.warn(message, context);
+    this.writeFile('warn', message, context);
   }
 
   error(message: any, stack?: string, context?: string): void {
@@ -47,6 +57,7 @@ export class AppLogger extends ConsoleLogger {
     this.isProd
       ? this.writeJson('error', message, context, 'stderr', stack)
       : super.error(message, stack, context);
+    this.writeFile('error', message, context, stack);
   }
 
   verbose(message: any, context?: string): void {
@@ -54,6 +65,7 @@ export class AppLogger extends ConsoleLogger {
     this.isProd
       ? this.writeJson('verbose', message, context)
       : super.verbose(message, context);
+    this.writeFile('verbose', message, context);
   }
 
   debug(message: any, context?: string): void {
@@ -61,6 +73,7 @@ export class AppLogger extends ConsoleLogger {
     this.isProd
       ? this.writeJson('debug', message, context)
       : super.debug(message, context);
+    this.writeFile('debug', message, context);
   }
 
   private writeJson(
@@ -70,6 +83,28 @@ export class AppLogger extends ConsoleLogger {
     stream: 'stdout' | 'stderr' = 'stdout',
     stack?: string,
   ): void {
+    process[stream].write(
+      JSON.stringify(this.buildEntry(level, message, context, stack)) + '\n',
+    );
+  }
+
+  private writeFile(
+    level: string,
+    message: any,
+    context?: string,
+    stack?: string,
+  ): void {
+    this.fileWriter.write(
+      JSON.stringify(this.buildEntry(level, message, context, stack)) + '\n',
+    );
+  }
+
+  private buildEntry(
+    level: string,
+    message: any,
+    context?: string,
+    stack?: string,
+  ): Record<string, unknown> {
     const entry: Record<string, unknown> = {
       timestamp: new Date().toISOString(),
       level,
@@ -81,6 +116,6 @@ export class AppLogger extends ConsoleLogger {
           : String(message),
     };
     if (stack) entry.stack = stack;
-    process[stream].write(JSON.stringify(entry) + '\n');
+    return entry;
   }
 }
