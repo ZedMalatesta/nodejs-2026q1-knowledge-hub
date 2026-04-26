@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedError } from '../../errors/http.errors';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -78,33 +78,33 @@ describe('JwtAuthGuard', () => {
     });
   });
 
-  it('should throw UnauthorizedException when Authorization header is missing', async () => {
+  it('should throw UnauthorizedError when Authorization header is missing', async () => {
     const ctx = makeContext();
 
-    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedError);
     expect(mockJwt.verifyAsync).not.toHaveBeenCalled();
   });
 
-  it('should throw UnauthorizedException when the scheme is not Bearer', async () => {
+  it('should throw UnauthorizedError when the scheme is not Bearer', async () => {
     const ctx = makeContext({ authorization: 'Basic dXNlcjpwYXNz' });
 
-    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedError);
   });
 
-  it('should throw UnauthorizedException when the token is malformed', async () => {
+  it('should throw UnauthorizedError when the token is malformed', async () => {
     mockJwt.verifyAsync.mockRejectedValue(new Error('invalid token'));
     const ctx = makeContext({ authorization: 'Bearer bad.token.here' });
 
-    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedError);
   });
 
-  it('should throw UnauthorizedException when the token is expired', async () => {
+  it('should throw UnauthorizedError when the token is expired', async () => {
     const err = new Error('jwt expired');
     err.name = 'TokenExpiredError';
     mockJwt.verifyAsync.mockRejectedValue(err);
     const ctx = makeContext({ authorization: 'Bearer expired_token' });
 
-    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedError);
   });
 
   it('should verify using the JWT_SECRET env variable', async () => {

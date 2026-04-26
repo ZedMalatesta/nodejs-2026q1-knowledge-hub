@@ -33,6 +33,8 @@ COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=build /app/node_modules/@prisma/client-runtime-utils ./node_modules/@prisma/client-runtime-utils
 
+COPY docker/app/entrypoint.sh ./entrypoint.sh
+
 USER node
 
 ENV NODE_ENV=production
@@ -40,4 +42,4 @@ ENV PORT=4000
 
 EXPOSE 4000
 
-CMD ["node", "dist/src/main"]
+ENTRYPOINT ["sh", "entrypoint.sh"]

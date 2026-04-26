@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenError } from '../../errors/http.errors';
 import { Reflector } from '@nestjs/core';
 import { RolesGuard } from '../../auth/roles.guard';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -123,24 +123,24 @@ describe('RolesGuard', () => {
       expect(await guard.canActivate(ctx)).toBe(true);
     });
 
-    it('should throw ForbiddenException on POST requests', async () => {
+    it('should throw ForbiddenError on POST requests', async () => {
       const ctx = makeContext({
         role: 'viewer',
         method: 'POST',
         path: '/article',
       });
 
-      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenException on DELETE requests', async () => {
+    it('should throw ForbiddenError on DELETE requests', async () => {
       const ctx = makeContext({
         role: 'viewer',
         method: 'DELETE',
         path: '/article',
       });
 
-      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -175,24 +175,24 @@ describe('RolesGuard', () => {
       expect(await guard.canActivate(ctx)).toBe(true);
     });
 
-    it('should throw ForbiddenException on POST to /category', async () => {
+    it('should throw ForbiddenError on POST to /category', async () => {
       const ctx = makeContext({
         role: 'editor',
         method: 'POST',
         path: '/category',
       });
 
-      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenException on POST to /user', async () => {
+    it('should throw ForbiddenError on POST to /user', async () => {
       const ctx = makeContext({
         role: 'editor',
         method: 'POST',
         path: '/user',
       });
 
-      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenError);
     });
 
     it('should allow DELETE on own article', async () => {
@@ -210,7 +210,7 @@ describe('RolesGuard', () => {
       expect(await guard.canActivate(ctx)).toBe(true);
     });
 
-    it("should throw ForbiddenException on DELETE of another editor's article", async () => {
+    it("should throw ForbiddenError on DELETE of another editor's article", async () => {
       mockPrisma.article.findUnique.mockResolvedValue({
         id: 'art-2',
         authorId: 'other',
@@ -222,7 +222,7 @@ describe('RolesGuard', () => {
         params: { id: 'art-2' },
       });
 
-      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenError);
     });
 
     it('should allow PUT on own comment', async () => {
@@ -240,7 +240,7 @@ describe('RolesGuard', () => {
       expect(await guard.canActivate(ctx)).toBe(true);
     });
 
-    it("should throw ForbiddenException on PUT of another editor's comment", async () => {
+    it("should throw ForbiddenError on PUT of another editor's comment", async () => {
       mockPrisma.comment.findUnique.mockResolvedValue({
         id: 'c-2',
         authorId: 'other',
@@ -252,7 +252,7 @@ describe('RolesGuard', () => {
         params: { id: 'c-2' },
       });
 
-      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenError);
     });
 
     it('should return false on PUT/DELETE when no id param is present', async () => {

@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -12,7 +17,8 @@ function strip(value: any): any {
       return { ...value, data: value.data.map(strip) };
     }
 
-    const { password: _, ...rest } = value;
+    const rest = { ...value };
+    delete rest.password;
     return rest;
   }
 

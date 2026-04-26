@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenError, ValidationError } from '../../errors/http.errors';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../../auth/auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -99,12 +99,12 @@ describe('AuthService', () => {
       expect(createArg.data.role).toBe(Role.viewer);
     });
 
-    it('should throw BadRequestException when login is already taken', async () => {
+    it('should throw ValidationError when login is already taken', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'existing-id' });
 
       await expect(
         service.signup({ login: 'alice', password: 'secret' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ValidationError);
 
       expect(mockPrisma.user.create).not.toHaveBeenCalled();
     });
@@ -147,15 +147,15 @@ describe('AuthService', () => {
       expect(payload).toHaveProperty('role', Role.editor);
     });
 
-    it('should throw ForbiddenException when user does not exist', async () => {
+    it('should throw ForbiddenError when user does not exist', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
         service.login({ login: 'nobody', password: 'pass' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenException when password is incorrect', async () => {
+    it('should throw ForbiddenError when password is incorrect', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-1',
         login: 'alice',
@@ -165,7 +165,7 @@ describe('AuthService', () => {
 
       await expect(
         service.login({ login: 'alice', password: 'wrong' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -206,30 +206,30 @@ describe('AuthService', () => {
       expect(opts.secret).toBe(process.env.JWT_REFRESH_SECRET);
     });
 
-    it('should throw ForbiddenException when the JWT signature is invalid', async () => {
+    it('should throw ForbiddenError when the JWT signature is invalid', async () => {
       mockJwt.verifyAsync.mockRejectedValue(new Error('invalid signature'));
 
       await expect(
         service.refresh({ refreshToken: 'tampered' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenException when the token is expired', async () => {
+    it('should throw ForbiddenError when the token is expired', async () => {
       const err = new Error('jwt expired');
       err.name = 'TokenExpiredError';
       mockJwt.verifyAsync.mockRejectedValue(err);
 
       await expect(
         service.refresh({ refreshToken: 'expired' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenException when the user was deleted after the token was issued', async () => {
+    it('should throw ForbiddenError when the user was deleted after the token was issued', async () => {
       mockJwt.verifyAsync.mockResolvedValue({ userId: 'deleted' });
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(service.refresh({ refreshToken: 'valid' })).rejects.toThrow(
-        ForbiddenException,
+        ForbiddenError,
       );
     });
   });
@@ -246,7 +246,7 @@ describe('AuthService', () => {
 
       await expect(
         service.refresh({ refreshToken: 'used_tok' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenError);
       expect(mockJwt.verifyAsync).not.toHaveBeenCalled();
     });
 
@@ -304,7 +304,7 @@ describe('AuthService', () => {
       expect(mockPrisma.user.create).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when login belongs to a non-admin user', async () => {
+    it('should throw ValidationError when login belongs to a non-admin user', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u3',
         role: Role.editor,
@@ -312,7 +312,7 @@ describe('AuthService', () => {
 
       await expect(
         service.adminCreate({ login: 'editor', password: 'pass' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ValidationError);
     });
   });
 });
