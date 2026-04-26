@@ -6,14 +6,16 @@ import {
   Param,
   Delete,
   Query,
-  ParseUUIDPipe,
   BadRequestException,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
+import { ParseUuidPipe } from 'src/pipes/parse-uuid.pipe';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 
 @ApiTags('comment')
 @Controller('comment')
@@ -21,7 +23,11 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
-  create(@Body() createCommentDto: CreateCommentDto) {
+  create(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
+    const user = (req as any).user;
+    if (user?.role === 'editor') {
+      createCommentDto.authorId = user.userId;
+    }
     return this.commentsService.create(createCommentDto);
   }
 
@@ -45,13 +51,13 @@ export class CommentsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  findOne(@Param('id', new ParseUuidPipe()) id: string) {
     return this.commentsService.findOne(id);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
-    this.commentsService.remove(id);
+  remove(@Param('id', new ParseUuidPipe()) id: string) {
+    return this.commentsService.remove(id);
   }
 }

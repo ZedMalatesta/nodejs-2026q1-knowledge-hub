@@ -19,7 +19,7 @@ export class UsersService {
     const { password, ...rest } = user;
     return {
       ...rest,
-      role: user.role.toLowerCase(),
+      role: user.role,
       createdAt: user.createdAt instanceof Date ? user.createdAt.getTime() : user.createdAt,
       updatedAt: user.updatedAt instanceof Date ? user.updatedAt.getTime() : user.updatedAt,
     };
@@ -52,24 +52,32 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    if (!updateUserDto.oldPassword || !updateUserDto.newPassword) {
+    const hasPasswordUpdate = updateUserDto.oldPassword && updateUserDto.newPassword;
+    const hasRoleUpdate = updateUserDto.role !== undefined;
+
+    if (!hasPasswordUpdate && !hasRoleUpdate) {
       throw new BadRequestException('Invalid data');
     }
+
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    if (user.password !== updateUserDto.oldPassword) {
-      throw new ForbiddenException('Old password does not match');
+
+    const data: Record<string, any> = {};
+
+    if (hasPasswordUpdate) {
+      if (user.password !== updateUserDto.oldPassword) {
+        throw new ForbiddenException('Old password does not match');
+      }
+      data.password = updateUserDto.newPassword;
     }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id },
-      data: {
-        password: updateUserDto.newPassword,
-      },
-    });
+    if (hasRoleUpdate) {
+      data.role = this.mapRoleToPrisma(updateUserDto.role);
+    }
 
+    const updatedUser = await this.prisma.user.update({ where: { id }, data });
     return this.mapUser(updatedUser);
   }
 
@@ -100,11 +108,6 @@ export class UsersService {
   }
 
   private mapRoleToPrisma(role: UserRole): any {
-    const roleMap: Record<string, string> = {
-      [UserRole.ADMIN]: 'ADMIN',
-      [UserRole.EDITOR]: 'EDITOR',
-      [UserRole.VIEWER]: 'VIEWER',
-    };
-    return roleMap[role] || 'VIEWER';
+    return role || UserRole.VIEWER;
   }
 }

@@ -1,6 +1,7 @@
 import { PrismaClient, Role, ArticleStatus } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import * as bcrypt from 'bcryptjs';
 import 'dotenv/config';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -18,25 +19,25 @@ async function main() {
   // 1. Users
   const admin = await prisma.user.create({
     data: {
-      login: 'admin',
-      password: 'adminpassword',
-      role: Role.ADMIN,
+      login: 'TEST_ADMIN_USER',
+      password: await bcrypt.hash('TestAdmin123!', 10),
+      role: Role.admin,
     },
   });
 
   const editor = await prisma.user.create({
     data: {
       login: 'editor',
-      password: 'editorpassword',
-      role: Role.EDITOR,
+      password: await bcrypt.hash('editorpassword', 10),
+      role: Role.editor,
     },
   });
 
   const viewer = await prisma.user.create({
     data: {
       login: 'viewer',
-      password: 'viewerpassword',
-      role: Role.VIEWER,
+      password: await bcrypt.hash('viewerpassword', 10),
+      role: Role.viewer,
     },
   });
 

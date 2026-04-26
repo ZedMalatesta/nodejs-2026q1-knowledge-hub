@@ -6,16 +6,18 @@ import {
   Param,
   HttpCode,
   Query,
-  ParseUUIDPipe,
   Put,
   Delete,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleStatus } from 'src/const/const';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { ParseUuidPipe } from 'src/pipes/parse-uuid.pipe';
 
 @ApiTags('article')
 @Controller('article')
@@ -51,19 +53,23 @@ export class ArticlesController {
   }
 
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  findOne(@Param('id', new ParseUuidPipe()) id: string) {
     return this.articlesService.findOne(id);
   }
 
   @Post()
   @HttpCode(201)
-  create(@Body() createArticleDto: CreateArticleDto) {
+  create(@Body() createArticleDto: CreateArticleDto, @Req() req: Request) {
+    const user = (req as any).user;
+    if (user?.role === 'editor') {
+      createArticleDto.authorId = user.userId;
+    }
     return this.articlesService.create(createArticleDto);
   }
 
   @Put(':id')
   update(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUuidPipe()) id: string,
     @Body() updateArticleDto: UpdateArticleDto,
   ) {
     return this.articlesService.update(id, updateArticleDto);
@@ -71,7 +77,7 @@ export class ArticlesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+  remove(@Param('id', new ParseUuidPipe()) id: string) {
     return this.articlesService.remove(id);
   }
 }
