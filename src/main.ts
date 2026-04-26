@@ -38,5 +38,25 @@ async function bootstrap() {
   const port = process.env.PORT ?? 4000;
   await app.listen(port);
   appLogger.log(`Application listening on port ${port}`);
+
+  async function shutdown(error: unknown, origin: string): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    appLogger.error(`${origin}: ${message}`, stack, 'Process');
+    try {
+      await app.close();
+    } catch {
+      // ignore close errors during shutdown
+    }
+    process.exit(1);
+  }
+
+  process.on('uncaughtException', (error, origin) =>
+    shutdown(error, `uncaughtException (${origin})`),
+  );
+
+  process.on('unhandledRejection', (reason) =>
+    shutdown(reason, 'unhandledRejection'),
+  );
 }
 bootstrap();
