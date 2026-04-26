@@ -21,7 +21,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public npm run db:seed && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public jest --testMatch \"<rootDir>/*.spec.ts\" --noStackTrace --runInBand",
+    "test": "vitest run",
     "test:auth": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public npm run db:seed && cross-env TEST_MODE=auth DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public jest --testPathIgnorePatterns \"refresh|rbac|custom\" --noStackTrace --runInBand",
     "test:refresh": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public npm run db:seed && cross-env TEST_MODE=auth DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public jest --testPathPattern refresh.e2e.spec.ts --noStackTrace --runInBand",
     "test:rbac": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public npm run db:seed && cross-env TEST_MODE=auth DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public jest --testPathPattern rbac --noStackTrace --runInBand",
