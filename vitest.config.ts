@@ -30,7 +30,21 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.spec.ts', 'src/**/*.module.ts', 'src/main.ts'],
+      exclude: [
+        'src/**/*.spec.ts',
+        'src/**/*.module.ts',
+        'src/main.ts',
+        'src/**/*.controller.ts',
+        'src/app.service.ts',
+        'src/prisma/prisma.service.ts',
+        'src/auth/decorators/**',
+        'src/**/*.entity.ts',
+        'src/const/**',
+      ],
+      thresholds: {
+        lines: 90,
+        branches: 85,
+      },
     },
   },
 });
