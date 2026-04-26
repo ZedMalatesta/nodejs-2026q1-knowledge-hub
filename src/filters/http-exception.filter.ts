@@ -21,7 +21,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const message =
       typeof exceptionResponse === 'string'
         ? exceptionResponse
-        : (exceptionResponse as any).message ?? exception.message;
+        : ((exceptionResponse as any).message ?? exception.message);
 
     const logMsg = `${request.method} ${request.url} ${status} - ${message}`;
     if (status >= 500) {

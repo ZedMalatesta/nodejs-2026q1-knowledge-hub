@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenError, ValidationError } from '../errors/http.errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -31,7 +27,7 @@ export class AuthService {
 
     if (existingUser) {
       this.logger.warn(`Signup failed: login already taken`);
-      throw new BadRequestException('Login is already taken');
+      throw new ValidationError('Login is already taken');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -63,14 +59,14 @@ export class AuthService {
 
     if (!user) {
       this.logger.warn(`Login failed: user not found`);
-      throw new ForbiddenException('Authentication failed');
+      throw new ForbiddenError('Authentication failed');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       this.logger.warn(`Login failed: invalid password for user id=${user.id}`);
-      throw new ForbiddenException('Authentication failed');
+      throw new ForbiddenError('Authentication failed');
     }
 
     const payload = { userId: user.id, login: user.login, role: user.role };
@@ -92,24 +88,33 @@ export class AuthService {
   async refresh(refreshDto: RefreshDto) {
     if (this.blacklistedTokens.has(refreshDto.refreshToken)) {
       this.logger.warn('Token refresh rejected: token is blacklisted');
-      throw new ForbiddenException('Authentication failed');
+      throw new ForbiddenError('Authentication failed');
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(refreshDto.refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
+      const payload = await this.jwtService.verifyAsync(
+        refreshDto.refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET,
+        },
+      );
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.userId },
       });
 
       if (!user) {
-        this.logger.warn(`Token refresh failed: user id=${payload.userId} not found`);
-        throw new ForbiddenException('Authentication failed');
+        this.logger.warn(
+          `Token refresh failed: user id=${payload.userId} not found`,
+        );
+        throw new ForbiddenError('Authentication failed');
       }
 
-      const newPayload = { userId: user.id, login: user.login, role: user.role };
+      const newPayload = {
+        userId: user.id,
+        login: user.login,
+        role: user.role,
+      };
 
       const accessToken = await this.jwtService.signAsync(newPayload, {
         secret: process.env.JWT_SECRET,
@@ -124,9 +129,9 @@ export class AuthService {
       this.logger.debug(`Tokens refreshed for user id=${user.id}`);
       return { accessToken, refreshToken };
     } catch (e) {
-      if (e instanceof ForbiddenException) throw e;
+      if (e instanceof ForbiddenError) throw e;
       this.logger.warn(`Token refresh failed: ${(e as Error).message}`);
-      throw new ForbiddenException('Authentication failed');
+      throw new ForbiddenError('Authentication failed');
     }
   }
 
@@ -146,8 +151,10 @@ export class AuthService {
         this.logger.debug(`Admin already exists: id=${existing.id}`);
         return { id: existing.id, login: existing.login, role: existing.role };
       }
-      this.logger.warn(`Admin creation failed: login already taken by non-admin`);
-      throw new BadRequestException('Login already taken');
+      this.logger.warn(
+        `Admin creation failed: login already taken by non-admin`,
+      );
+      throw new ValidationError('Login already taken');
     }
 
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);

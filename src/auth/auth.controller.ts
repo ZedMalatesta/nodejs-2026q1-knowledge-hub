@@ -36,7 +36,9 @@ export class AuthController {
     if (!body || typeof body.refreshToken !== 'string' || !body.refreshToken) {
       throw new UnauthorizedException('Invalid DTO');
     }
-    return this.authService.refresh({ refreshToken: body.refreshToken } as RefreshDto);
+    return this.authService.refresh({
+      refreshToken: body.refreshToken,
+    } as RefreshDto);
   }
 
   @Public()
@@ -46,7 +48,9 @@ export class AuthController {
     if (!body || typeof body.refreshToken !== 'string' || !body.refreshToken) {
       throw new UnauthorizedException('Invalid DTO');
     }
-    return this.authService.logout({ refreshToken: body.refreshToken } as RefreshDto);
+    return this.authService.logout({
+      refreshToken: body.refreshToken,
+    } as RefreshDto);
   }
 
   @Public()

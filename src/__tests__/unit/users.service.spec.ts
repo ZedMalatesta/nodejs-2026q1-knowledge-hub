@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '../../errors/http.errors';
 import { UsersService } from '../../users/users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRole } from 'src/const/const';
@@ -106,12 +106,10 @@ describe('UsersService', () => {
       expect(result).toHaveProperty('login', 'alice');
     });
 
-    it('should throw NotFoundException when user does not exist', async () => {
+    it('should throw NotFoundError when user does not exist', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -209,7 +207,7 @@ describe('UsersService', () => {
       );
     });
 
-    it('should throw ForbiddenException when oldPassword does not match', async () => {
+    it('should throw ForbiddenError when oldPassword does not match', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u1',
         login: 'alice',
@@ -221,25 +219,23 @@ describe('UsersService', () => {
 
       await expect(
         service.update('u1', { oldPassword: 'wrong', newPassword: 'new_pass' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenError);
 
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when neither password nor role is supplied', async () => {
-      await expect(service.update('u1', {})).rejects.toThrow(
-        BadRequestException,
-      );
+    it('should throw ValidationError when neither password nor role is supplied', async () => {
+      await expect(service.update('u1', {})).rejects.toThrow(ValidationError);
 
       expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException when user does not exist', async () => {
+    it('should throw NotFoundError when user does not exist', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
         service.update('missing', { role: UserRole.ADMIN }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -266,12 +262,10 @@ describe('UsersService', () => {
       expect(mockTx.user.delete).toHaveBeenCalledWith({ where: { id: 'u1' } });
     });
 
-    it('should throw NotFoundException when user does not exist', async () => {
+    it('should throw NotFoundError when user does not exist', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundError);
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });

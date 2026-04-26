@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundError } from '../../errors/http.errors';
 import { CategoriesService } from '../../categories/categories.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -68,12 +68,10 @@ describe('CategoriesService', () => {
       expect(result).toHaveProperty('name', 'Tech');
     });
 
-    it('should throw NotFoundException when category does not exist', async () => {
+    it('should throw NotFoundError when category does not exist', async () => {
       mockPrisma.category.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -116,11 +114,11 @@ describe('CategoriesService', () => {
       expect(result).toHaveProperty('description', 'New');
     });
 
-    it('should throw NotFoundException when category does not exist', async () => {
+    it('should throw NotFoundError when category does not exist', async () => {
       mockPrisma.category.findUnique.mockResolvedValue(null);
 
       await expect(service.update('missing', { name: 'x' })).rejects.toThrow(
-        NotFoundException,
+        NotFoundError,
       );
       expect(mockPrisma.category.update).not.toHaveBeenCalled();
     });
@@ -137,12 +135,10 @@ describe('CategoriesService', () => {
       });
     });
 
-    it('should throw NotFoundException when category does not exist', async () => {
+    it('should throw NotFoundError when category does not exist', async () => {
       mockPrisma.category.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundError);
       expect(mockPrisma.category.delete).not.toHaveBeenCalled();
     });
   });

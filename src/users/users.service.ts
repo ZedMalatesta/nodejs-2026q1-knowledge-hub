@@ -1,10 +1,9 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '../errors/http.errors';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,16 +18,28 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   private mapUser(user: any) {
-    const { password, ...rest } = user;
+    const rest = { ...user };
+    delete rest.password;
     return {
       ...rest,
       role: user.role,
-      createdAt: user.createdAt instanceof Date ? user.createdAt.getTime() : user.createdAt,
-      updatedAt: user.updatedAt instanceof Date ? user.updatedAt.getTime() : user.updatedAt,
+      createdAt:
+        user.createdAt instanceof Date
+          ? user.createdAt.getTime()
+          : user.createdAt,
+      updatedAt:
+        user.updatedAt instanceof Date
+          ? user.updatedAt.getTime()
+          : user.updatedAt,
     };
   }
 
-  async findAll(page?: string, limit?: string, sortBy?: string, order?: string) {
+  async findAll(
+    page?: string,
+    limit?: string,
+    sortBy?: string,
+    order?: string,
+  ) {
     this.logger.debug('Fetching all users');
     const users = await this.prisma.user.findMany();
     let data = users.map((u) => this.mapUser(u));
@@ -41,7 +52,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       this.logger.warn(`User not found: id=${id}`);
-      throw new NotFoundException('User not found');
+      throw new NotFoundError('User not found');
     }
     return this.mapUser(user);
   }
@@ -59,24 +70,25 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const hasPasswordUpdate = updateUserDto.oldPassword && updateUserDto.newPassword;
+    const hasPasswordUpdate =
+      updateUserDto.oldPassword && updateUserDto.newPassword;
     const hasRoleUpdate = updateUserDto.role !== undefined;
 
     if (!hasPasswordUpdate && !hasRoleUpdate) {
-      throw new BadRequestException('Invalid data');
+      throw new ValidationError('Invalid data');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       this.logger.warn(`User not found for update: id=${id}`);
-      throw new NotFoundException('User not found');
+      throw new NotFoundError('User not found');
     }
 
     const data: Record<string, any> = {};
 
     if (hasPasswordUpdate) {
       if (user.password !== updateUserDto.oldPassword) {
-        throw new ForbiddenException('Old password does not match');
+        throw new ForbiddenError('Old password does not match');
       }
       data.password = updateUserDto.newPassword;
     }
@@ -94,7 +106,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       this.logger.warn(`User not found for deletion: id=${id}`);
-      throw new NotFoundException('User not found');
+      throw new NotFoundError('User not found');
     }
 
     await this.prisma.$transaction(async (tx) => {

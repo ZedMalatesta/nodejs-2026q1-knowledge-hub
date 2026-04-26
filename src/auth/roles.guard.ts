@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { ForbiddenError } from '../errors/http.errors';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
@@ -27,7 +23,7 @@ export class RolesGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    
+
     if (!user) {
       return false;
     }
@@ -44,7 +40,7 @@ export class RolesGuard implements CanActivate {
       if (method === 'GET') {
         return true;
       }
-      throw new ForbiddenException('Viewers have read-only access');
+      throw new ForbiddenError('Viewers have read-only access');
     }
 
     if (role === 'editor') {
@@ -53,10 +49,13 @@ export class RolesGuard implements CanActivate {
       }
 
       if (path.startsWith('/category') || path.startsWith('/user')) {
-        throw new ForbiddenException('Editors cannot manage categories or users');
+        throw new ForbiddenError('Editors cannot manage categories or users');
       }
 
-      if (method === 'POST' && (path.startsWith('/article') || path.startsWith('/comment'))) {
+      if (
+        method === 'POST' &&
+        (path.startsWith('/article') || path.startsWith('/comment'))
+      ) {
         return true;
       }
 
@@ -65,23 +64,31 @@ export class RolesGuard implements CanActivate {
         if (!id) return false;
 
         if (path.startsWith('/article')) {
-          const article = await this.prisma.article.findUnique({ where: { id } });
+          const article = await this.prisma.article.findUnique({
+            where: { id },
+          });
           if (!article || article.authorId !== user.userId) {
-            throw new ForbiddenException('Editors can only modify their own articles');
+            throw new ForbiddenError(
+              'Editors can only modify their own articles',
+            );
           }
           return true;
         }
 
         if (path.startsWith('/comment')) {
-          const comment = await this.prisma.comment.findUnique({ where: { id } });
+          const comment = await this.prisma.comment.findUnique({
+            where: { id },
+          });
           if (!comment || comment.authorId !== user.userId) {
-            throw new ForbiddenException('Editors can only modify their own comments');
+            throw new ForbiddenError(
+              'Editors can only modify their own comments',
+            );
           }
           return true;
         }
       }
     }
 
-    throw new ForbiddenException('Operation not permitted');
+    throw new ForbiddenError('Operation not permitted');
   }
 }

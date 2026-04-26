@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { NotFoundError } from '../errors/http.errors';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,8 +23,14 @@ export class ArticlesService {
       authorId: article.authorId,
       categoryId: article.categoryId,
       tags: article.tags?.map((t: any) => t.name) ?? [],
-      createdAt: article.createdAt instanceof Date ? article.createdAt.getTime() : article.createdAt,
-      updatedAt: article.updatedAt instanceof Date ? article.updatedAt.getTime() : article.updatedAt,
+      createdAt:
+        article.createdAt instanceof Date
+          ? article.createdAt.getTime()
+          : article.createdAt,
+      updatedAt:
+        article.updatedAt instanceof Date
+          ? article.updatedAt.getTime()
+          : article.updatedAt,
     };
   }
 
@@ -78,7 +85,7 @@ export class ArticlesService {
     });
     if (!article) {
       this.logger.warn(`Article not found: id=${id}`);
-      throw new NotFoundException('Article not found');
+      throw new NotFoundError('Article not found');
     }
     return this.mapArticle(article);
   }
@@ -90,7 +97,9 @@ export class ArticlesService {
       data: {
         title: createArticleDto.title,
         content: createArticleDto.content,
-        status: this.mapStatusToPrisma(createArticleDto.status || ArticleStatus.DRAFT),
+        status: this.mapStatusToPrisma(
+          createArticleDto.status || ArticleStatus.DRAFT,
+        ),
         authorId: createArticleDto.authorId ?? null,
         categoryId: createArticleDto.categoryId ?? null,
         tags: {
@@ -111,7 +120,7 @@ export class ArticlesService {
     const existing = await this.prisma.article.findUnique({ where: { id } });
     if (!existing) {
       this.logger.warn(`Article not found for update: id=${id}`);
-      throw new NotFoundException('Article not found');
+      throw new NotFoundError('Article not found');
     }
 
     const { tags, status, ...rest } = updateArticleDto;
@@ -142,7 +151,7 @@ export class ArticlesService {
     const existing = await this.prisma.article.findUnique({ where: { id } });
     if (!existing) {
       this.logger.warn(`Article not found for deletion: id=${id}`);
-      throw new NotFoundException('Article not found');
+      throw new NotFoundError('Article not found');
     }
 
     await this.prisma.article.delete({ where: { id } });

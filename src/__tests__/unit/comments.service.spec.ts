@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { NotFoundError, UnprocessableEntityError } from '../../errors/http.errors';
 import { CommentsService } from '../../comments/comments.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -117,12 +114,10 @@ describe('CommentsService', () => {
       expect(result).toHaveProperty('createdAt', createdAt.getTime());
     });
 
-    it('should throw NotFoundException when comment does not exist', async () => {
+    it('should throw NotFoundError when comment does not exist', async () => {
       mockPrisma.comment.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -166,12 +161,12 @@ describe('CommentsService', () => {
       ).toBeNull();
     });
 
-    it('should throw UnprocessableEntityException when the article does not exist', async () => {
+    it('should throw UnprocessableEntityError when the article does not exist', async () => {
       mockPrisma.article.findUnique.mockResolvedValue(null);
 
       await expect(
         service.create({ content: 'x', articleId: 'missing-art' }),
-      ).rejects.toThrow(UnprocessableEntityException);
+      ).rejects.toThrow(UnprocessableEntityError);
 
       expect(mockPrisma.comment.create).not.toHaveBeenCalled();
     });
@@ -188,12 +183,10 @@ describe('CommentsService', () => {
       });
     });
 
-    it('should throw NotFoundException when comment does not exist', async () => {
+    it('should throw NotFoundError when comment does not exist', async () => {
       mockPrisma.comment.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundError);
       expect(mockPrisma.comment.delete).not.toHaveBeenCalled();
     });
   });

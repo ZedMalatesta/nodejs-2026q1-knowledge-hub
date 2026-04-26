@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { NotFoundError } from '../errors/http.errors';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,7 +12,12 @@ export class CategoriesService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page?: string, limit?: string, sortBy?: string, order?: string) {
+  async findAll(
+    page?: string,
+    limit?: string,
+    sortBy?: string,
+    order?: string,
+  ) {
     this.logger.debug('Fetching all categories');
     const categories = await this.prisma.category.findMany();
     const data = sortData(categories, sortBy, order);
@@ -23,7 +29,7 @@ export class CategoriesService {
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) {
       this.logger.warn(`Category not found: id=${id}`);
-      throw new NotFoundException('Category not found');
+      throw new NotFoundError('Category not found');
     }
     return category;
   }
@@ -43,7 +49,7 @@ export class CategoriesService {
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) {
       this.logger.warn(`Category not found for update: id=${id}`);
-      throw new NotFoundException('Category not found');
+      throw new NotFoundError('Category not found');
     }
 
     const updated = await this.prisma.category.update({
@@ -58,7 +64,7 @@ export class CategoriesService {
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) {
       this.logger.warn(`Category not found for deletion: id=${id}`);
-      throw new NotFoundException('Category not found');
+      throw new NotFoundError('Category not found');
     }
 
     await this.prisma.category.delete({ where: { id } });

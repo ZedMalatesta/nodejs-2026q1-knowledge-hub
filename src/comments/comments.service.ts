@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { NotFoundError, UnprocessableEntityError } from '../errors/http.errors';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { paginate } from '../utils/pagination';
@@ -49,7 +45,7 @@ export class CommentsService {
     const comment = await this.prisma.comment.findUnique({ where: { id } });
     if (!comment) {
       this.logger.warn(`Comment not found: id=${id}`);
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundError('Comment not found');
     }
     return this.mapComment(comment);
   }
@@ -63,7 +59,7 @@ export class CommentsService {
       this.logger.warn(
         `Comment creation failed: article id=${createCommentDto.articleId} not found`,
       );
-      throw new UnprocessableEntityException('Article not found');
+      throw new UnprocessableEntityError('Article not found');
     }
 
     const comment = await this.prisma.comment.create({
@@ -82,7 +78,7 @@ export class CommentsService {
     const comment = await this.prisma.comment.findUnique({ where: { id } });
     if (!comment) {
       this.logger.warn(`Comment not found for deletion: id=${id}`);
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundError('Comment not found');
     }
     await this.prisma.comment.delete({ where: { id } });
     this.logger.log(`Comment deleted: id=${id}`);

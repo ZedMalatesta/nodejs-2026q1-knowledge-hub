@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundError } from '../../errors/http.errors';
 import { ArticlesService } from '../../articles/articles.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ArticleStatus } from 'src/const/const';
@@ -140,12 +140,10 @@ describe('ArticlesService', () => {
       expect(result.tags).toEqual(['ts', 'nest']);
     });
 
-    it('should throw NotFoundException when the article does not exist', async () => {
+    it('should throw NotFoundError when the article does not exist', async () => {
       mockPrisma.article.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -335,11 +333,11 @@ describe('ArticlesService', () => {
       });
     });
 
-    it('should throw NotFoundException when article does not exist', async () => {
+    it('should throw NotFoundError when article does not exist', async () => {
       mockPrisma.article.findUnique.mockResolvedValue(null);
 
       await expect(service.update('missing', { title: 'x' })).rejects.toThrow(
-        NotFoundException,
+        NotFoundError,
       );
     });
   });
@@ -355,12 +353,10 @@ describe('ArticlesService', () => {
       });
     });
 
-    it('should throw NotFoundException when article does not exist', async () => {
+    it('should throw NotFoundError when article does not exist', async () => {
       mockPrisma.article.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('missing')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundError);
     });
   });
 });
