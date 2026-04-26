@@ -57,7 +57,9 @@ describe('CategoriesService', () => {
   describe('findOne', () => {
     it('should return the category when it exists', async () => {
       mockPrisma.category.findUnique.mockResolvedValue({
-        id: 'c1', name: 'Tech', description: 'Technology',
+        id: 'c1',
+        name: 'Tech',
+        description: 'Technology',
       });
 
       const result = await service.findOne('c1');
@@ -69,17 +71,24 @@ describe('CategoriesService', () => {
     it('should throw NotFoundException when category does not exist', async () => {
       mockPrisma.category.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('create', () => {
     it('should create and return the new category', async () => {
       mockPrisma.category.create.mockResolvedValue({
-        id: 'c1', name: 'Tech', description: 'Technology',
+        id: 'c1',
+        name: 'Tech',
+        description: 'Technology',
       });
 
-      const result = await service.create({ name: 'Tech', description: 'Technology' });
+      const result = await service.create({
+        name: 'Tech',
+        description: 'Technology',
+      });
 
       expect(result).toHaveProperty('id', 'c1');
       expect(mockPrisma.category.create.mock.calls[0][0].data).toEqual({
@@ -91,8 +100,16 @@ describe('CategoriesService', () => {
 
   describe('update', () => {
     it('should update and return the category', async () => {
-      mockPrisma.category.findUnique.mockResolvedValue({ id: 'c1', name: 'Tech', description: 'Old' });
-      mockPrisma.category.update.mockResolvedValue({ id: 'c1', name: 'Tech', description: 'New' });
+      mockPrisma.category.findUnique.mockResolvedValue({
+        id: 'c1',
+        name: 'Tech',
+        description: 'Old',
+      });
+      mockPrisma.category.update.mockResolvedValue({
+        id: 'c1',
+        name: 'Tech',
+        description: 'New',
+      });
 
       const result = await service.update('c1', { description: 'New' });
 
@@ -102,7 +119,9 @@ describe('CategoriesService', () => {
     it('should throw NotFoundException when category does not exist', async () => {
       mockPrisma.category.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('missing', { name: 'x' })).rejects.toThrow(NotFoundException);
+      await expect(service.update('missing', { name: 'x' })).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockPrisma.category.update).not.toHaveBeenCalled();
     });
   });
@@ -113,13 +132,17 @@ describe('CategoriesService', () => {
       mockPrisma.category.delete.mockResolvedValue(undefined);
 
       await expect(service.remove('c1')).resolves.toBeUndefined();
-      expect(mockPrisma.category.delete).toHaveBeenCalledWith({ where: { id: 'c1' } });
+      expect(mockPrisma.category.delete).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+      });
     });
 
     it('should throw NotFoundException when category does not exist', async () => {
       mockPrisma.category.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockPrisma.category.delete).not.toHaveBeenCalled();
     });
   });

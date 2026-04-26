@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { of } from 'rxjs';
 import { StripPasswordInterceptor } from '../../interceptors/strip-password.interceptor';
 
@@ -17,7 +17,12 @@ function run(value: any): Promise<any> {
 
 describe('StripPasswordInterceptor', () => {
   it('should remove the password field from a single user object', async () => {
-    const result = await run({ id: 'u1', login: 'alice', password: 'secret', role: 'viewer' });
+    const result = await run({
+      id: 'u1',
+      login: 'alice',
+      password: 'secret',
+      role: 'viewer',
+    });
 
     expect(result).not.toHaveProperty('password');
     expect(result).toHaveProperty('login', 'alice');

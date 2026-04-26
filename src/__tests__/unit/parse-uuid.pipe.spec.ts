@@ -29,9 +29,9 @@ describe('ParseUuidPipe', () => {
     });
 
     it('should throw BadRequestException for a UUID v1', () => {
-      expect(() => pipe.transform('6ba7b810-9dad-11d1-80b4-00c04fd430c8')).toThrow(
-        BadRequestException,
-      );
+      expect(() =>
+        pipe.transform('6ba7b810-9dad-11d1-80b4-00c04fd430c8'),
+      ).toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for a UUID missing hyphens', () => {
@@ -41,9 +41,9 @@ describe('ParseUuidPipe', () => {
     });
 
     it('should throw BadRequestException for a UUID with an invalid variant nibble', () => {
-      expect(() => pipe.transform('550e8400-e29b-41d4-c716-446655440000')).toThrow(
-        BadRequestException,
-      );
+      expect(() =>
+        pipe.transform('550e8400-e29b-41d4-c716-446655440000'),
+      ).toThrow(BadRequestException);
     });
 
     it('should include the invalid value in the error message', () => {
