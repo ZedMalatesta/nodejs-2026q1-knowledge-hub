@@ -23,7 +23,7 @@ A RESTful API built with NestJS, PostgreSQL, and Prisma. Supports JWT authentica
 ## Prerequisites
 
 | Tool | Version | Link |
-|------|---------|------|
+| ---- | ------- | ---- |
 | Node.js | 20 or 22 LTS | [nodejs.org](https://nodejs.org/en/download/) |
 | npm | bundled with Node | — |
 | PostgreSQL | 14+ | [postgresql.org](https://www.postgresql.org/download/) |
@@ -107,7 +107,7 @@ npm run docker:down
 All variables live in `.env`. Copy `.env.example` to get started — every value has a sensible default for local development.
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+| -------- | ----------- | ------- |
 | `PORT` | Port the app listens on | `4000` |
 | `DATABASE_URL` | Postgres connection string | `localhost:5432` (local) |
 | `POSTGRES_USER` | Postgres username | `postgres` |
@@ -148,7 +148,7 @@ npm run db:seed
 After seeding the following accounts exist:
 
 | Login | Password | Role |
-|-------|----------|------|
+| ----- | -------- | ---- |
 | `TEST_ADMIN_USER` | `TestAdmin123!` | admin |
 | `editor` | (see seed file) | editor |
 
@@ -167,7 +167,7 @@ curl -X POST http://localhost:4000/auth/admin-create \
 ## Running the Application
 
 | Command | Description |
-|---------|-------------|
+| ------- | ----------- |
 | `npm start` | Start with ts-node (development, no build needed) |
 | `npm run start:dev` | Start with file-watch (restarts on change) |
 | `npm run build && npm run start:prod` | Compile then run from `dist/` |
@@ -189,7 +189,7 @@ All endpoints require a **Bearer token** in the `Authorization` header except:
 ### Role permissions summary
 
 | Action | admin | editor | viewer |
-|--------|-------|--------|--------|
+| ------ | ----- | ------ | ------ |
 | Read anything | ✓ | ✓ | ✓ |
 | Create / edit / delete articles & comments | ✓ | own only | ✗ |
 | Manage categories | ✓ | ✗ | ✗ |
@@ -199,47 +199,45 @@ All endpoints require a **Bearer token** in the `Authorization` header except:
 
 ## Testing
 
-### Unit tests (Vitest)
+> **Requires a running app.** Start the server first (`npm start`), then run tests in a second terminal.
 
-No running server or database needed:
-
-```bash
-npm run test:unit
-```
-
-Run with coverage report:
+Run everything — Vitest unit tests and all Jest e2e suites — with one command:
 
 ```bash
-npm run test:coverage
+npm test
 ```
 
-### End-to-end tests (Jest + Supertest)
+Or run individual groups:
 
-These hit a running server. **Start the app first** (`npm start` or `npm run start:dev`), then open a second terminal.
+| Command | Tests | What it runs |
+| ------- | ----- | ----------- |
+| `npm run test:unit` | 189 | Vitest unit tests (no server needed) |
+| `npm run test:coverage` | 310 | All tests + coverage report |
+| `npm run test:auth` | 77 | Full CRUD + auth flow for all resources |
+| `npm run test:refresh` | 4 | Refresh token lifecycle |
+| `npm run test:rbac` | 35 | Role-based access control scenarios |
+| `npm run test:custom` | 5 | Pagination & sorting edge cases |
 
-The e2e scripts automatically seed the database before running, so point them at a **test database**, not production.
+The e2e scripts seed the database automatically before each run — point them at a **test database**, not production.
 
-| Command | What it runs |
-|---------|-------------|
-| `npm run test:auth` | Full CRUD + auth flow for all resources |
-| `npm run test:refresh` | Refresh token lifecycle |
-| `npm run test:rbac` | Role-based access control scenarios |
-| `npm run test:custom` | Pagination & sorting edge cases |
+### Coverage
 
-> All e2e commands connect directly to `localhost:5432`. Make sure your local Postgres is running even if your app is running in Docker, or adjust `DATABASE_URL` in the test scripts.
+| Metric | Result |
+| ------ | ------ |
+| Statements | 99.67% |
+| Branches | 94.39% |
+| Functions | 100% |
+| Lines | 99.66% |
 
-### Common testing workflow from scratch
+### Full test run from scratch
 
 ```bash
 # Terminal 1 — start the app
 npm run db:migrate
 npm start
 
-# Terminal 2 — run all e2e suites
-npm run test:auth
-npm run test:refresh
-npm run test:rbac
-npm run test:custom
+# Terminal 2 — run all tests
+npm test
 ```
 
 ---
@@ -276,7 +274,7 @@ npm run docker:down    # docker-compose down
 Services started:
 
 | Service | URL |
-|---------|-----|
+| ------- | --- |
 | API | http://localhost:4000 |
 | Swagger | http://localhost:4000/doc |
 | Postgres | `localhost:5432` (host machine) |

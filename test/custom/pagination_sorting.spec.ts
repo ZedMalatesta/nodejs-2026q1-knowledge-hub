@@ -1,9 +1,25 @@
 import _request from '../lib/request';
 import { usersRoutes, articlesRoutes, categoriesRoutes, commentsRoutes } from '../endpoints';
 import { StatusCodes } from 'http-status-codes';
+import { getTokenAndUserId, shouldAuthorizationBeTested, removeTokenUser } from '../utils';
 
 describe('Custom Pagination and Sorting Tests', () => {
-  const commonHeaders = { Accept: 'application/json' };
+  const commonHeaders: Record<string, string> = { Accept: 'application/json' };
+  let mockUserId: string | undefined;
+
+  beforeAll(async () => {
+    if (shouldAuthorizationBeTested) {
+      const result = await getTokenAndUserId(_request);
+      commonHeaders['Authorization'] = result.token;
+      mockUserId = result.mockUserId;
+    }
+  });
+
+  afterAll(async () => {
+    if (mockUserId) {
+      await removeTokenUser(_request, mockUserId, commonHeaders);
+    }
+  });
 
   it('1. should return paginated users with total, page, limit, and data', async () => {
     await _request.post(usersRoutes.create).set(commonHeaders).send({ login: 'user1_paginated', password: 'password123' });
