@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -13,6 +14,8 @@ import { sortData } from '../utils/sort';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private mapUser(user: any) {
@@ -26,6 +29,7 @@ export class UsersService {
   }
 
   async findAll(page?: string, limit?: string, sortBy?: string, order?: string) {
+    this.logger.debug('Fetching all users');
     const users = await this.prisma.user.findMany();
     let data = users.map((u) => this.mapUser(u));
     data = sortData(data, sortBy, order);
@@ -33,8 +37,10 @@ export class UsersService {
   }
 
   async findOne(id: string) {
+    this.logger.debug(`Fetching user id=${id}`);
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
+      this.logger.warn(`User not found: id=${id}`);
       throw new NotFoundException('User not found');
     }
     return this.mapUser(user);
@@ -48,6 +54,7 @@ export class UsersService {
         role: this.mapRoleToPrisma(createUserDto.role || UserRole.VIEWER),
       },
     });
+    this.logger.log(`User created: id=${user.id}`);
     return this.mapUser(user);
   }
 
@@ -61,6 +68,7 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
+      this.logger.warn(`User not found for update: id=${id}`);
       throw new NotFoundException('User not found');
     }
 
@@ -78,33 +86,27 @@ export class UsersService {
     }
 
     const updatedUser = await this.prisma.user.update({ where: { id }, data });
+    this.logger.log(`User updated: id=${id}`);
     return this.mapUser(updatedUser);
   }
 
   async remove(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
+      this.logger.warn(`User not found for deletion: id=${id}`);
       throw new NotFoundException('User not found');
     }
 
-    // Use transaction: set articles' authorId to null, delete comments, then delete user
     await this.prisma.$transaction(async (tx) => {
-      // Set authorId to null on articles (SetNull is handled by schema, but explicit for transaction)
       await tx.article.updateMany({
         where: { authorId: id },
         data: { authorId: null },
       });
-
-      // Delete user's comments (Cascade is handled by schema)
-      await tx.comment.deleteMany({
-        where: { authorId: id },
-      });
-
-      // Delete user
-      await tx.user.delete({
-        where: { id },
-      });
+      await tx.comment.deleteMany({ where: { authorId: id } });
+      await tx.user.delete({ where: { id } });
     });
+
+    this.logger.log(`User deleted: id=${id}`);
   }
 
   private mapRoleToPrisma(role: UserRole): any {

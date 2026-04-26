@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +9,8 @@ import { sortData } from '../utils/sort';
 
 @Injectable()
 export class ArticlesService {
+  private readonly logger = new Logger(ArticlesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private mapArticle(article: any) {
@@ -43,31 +45,24 @@ export class ArticlesService {
     sortBy?: string,
     order?: string,
   ) {
+    this.logger.debug(
+      `Fetching articles: status=${status} categoryId=${categoryId} tag=${tag}`,
+    );
     const where: Prisma.ArticleWhereInput = {};
 
     if (status) {
       where.status = this.mapStatusToPrisma(status);
     }
-
     if (categoryId) {
       where.categoryId = categoryId;
     }
-
     if (tag) {
-      where.tags = {
-        some: {
-          name: tag,
-        },
-      };
+      where.tags = { some: { name: tag } };
     }
 
     const articles = await this.prisma.article.findMany({
       where,
-      include: {
-        tags: {
-          select: { name: true },
-        },
-      },
+      include: { tags: { select: { name: true } } },
     });
 
     let data = articles.map((a) => this.mapArticle(a));
@@ -76,15 +71,13 @@ export class ArticlesService {
   }
 
   async findOne(id: string) {
+    this.logger.debug(`Fetching article id=${id}`);
     const article = await this.prisma.article.findUnique({
       where: { id },
-      include: {
-        tags: {
-          select: { name: true },
-        },
-      },
+      include: { tags: { select: { name: true } } },
     });
     if (!article) {
+      this.logger.warn(`Article not found: id=${id}`);
       throw new NotFoundException('Article not found');
     }
     return this.mapArticle(article);
@@ -107,19 +100,17 @@ export class ArticlesService {
           })),
         },
       },
-      include: {
-        tags: {
-          select: { name: true },
-        },
-      },
+      include: { tags: { select: { name: true } } },
     });
 
+    this.logger.log(`Article created: id=${article.id}`);
     return this.mapArticle(article);
   }
 
   async update(id: string, updateArticleDto: UpdateArticleDto) {
     const existing = await this.prisma.article.findUnique({ where: { id } });
     if (!existing) {
+      this.logger.warn(`Article not found for update: id=${id}`);
       throw new NotFoundException('Article not found');
     }
 
@@ -140,26 +131,21 @@ export class ArticlesService {
           },
         }),
       },
-      include: {
-        tags: {
-          select: { name: true },
-        },
-      },
+      include: { tags: { select: { name: true } } },
     });
 
+    this.logger.log(`Article updated: id=${id}`);
     return this.mapArticle(article);
   }
 
   async remove(id: string) {
     const existing = await this.prisma.article.findUnique({ where: { id } });
     if (!existing) {
+      this.logger.warn(`Article not found for deletion: id=${id}`);
       throw new NotFoundException('Article not found');
     }
 
-    // Cascade delete: comments are deleted by schema onDelete: Cascade
-    // Tag relations are removed automatically when article is deleted
-    await this.prisma.article.delete({
-      where: { id },
-    });
+    await this.prisma.article.delete({ where: { id } });
+    this.logger.log(`Article deleted: id=${id}`);
   }
 }

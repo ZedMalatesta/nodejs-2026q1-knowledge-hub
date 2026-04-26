@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -9,6 +14,7 @@ import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly blacklistedTokens = new Set<string>();
 
   constructor(
@@ -24,6 +30,7 @@ export class AuthService {
     });
 
     if (existingUser) {
+      this.logger.warn(`Signup failed: login already taken`);
       throw new BadRequestException('Login is already taken');
     }
 
@@ -37,6 +44,7 @@ export class AuthService {
       },
     });
 
+    this.logger.log(`User signed up: id=${user.id}`);
     return {
       id: user.id,
       login: user.login,
@@ -54,12 +62,14 @@ export class AuthService {
     });
 
     if (!user) {
+      this.logger.warn(`Login failed: user not found`);
       throw new ForbiddenException('Authentication failed');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      this.logger.warn(`Login failed: invalid password for user id=${user.id}`);
       throw new ForbiddenException('Authentication failed');
     }
 
@@ -75,14 +85,13 @@ export class AuthService {
       expiresIn: process.env.JWT_REFRESH_TTL as any,
     });
 
-    return {
-      accessToken,
-      refreshToken,
-    };
+    this.logger.log(`User logged in: id=${user.id}`);
+    return { accessToken, refreshToken };
   }
 
   async refresh(refreshDto: RefreshDto) {
     if (this.blacklistedTokens.has(refreshDto.refreshToken)) {
+      this.logger.warn('Token refresh rejected: token is blacklisted');
       throw new ForbiddenException('Authentication failed');
     }
 
@@ -96,6 +105,7 @@ export class AuthService {
       });
 
       if (!user) {
+        this.logger.warn(`Token refresh failed: user id=${payload.userId} not found`);
         throw new ForbiddenException('Authentication failed');
       }
 
@@ -111,17 +121,18 @@ export class AuthService {
         expiresIn: process.env.JWT_REFRESH_TTL as any,
       });
 
-      return {
-        accessToken,
-        refreshToken,
-      };
+      this.logger.debug(`Tokens refreshed for user id=${user.id}`);
+      return { accessToken, refreshToken };
     } catch (e) {
+      if (e instanceof ForbiddenException) throw e;
+      this.logger.warn(`Token refresh failed: ${(e as Error).message}`);
       throw new ForbiddenException('Authentication failed');
     }
   }
 
   async logout(refreshDto: RefreshDto) {
     this.blacklistedTokens.add(refreshDto.refreshToken);
+    this.logger.debug('Token blacklisted on logout');
     return { message: 'Logged out successfully' };
   }
 
@@ -132,8 +143,10 @@ export class AuthService {
 
     if (existing) {
       if (existing.role === Role.admin) {
+        this.logger.debug(`Admin already exists: id=${existing.id}`);
         return { id: existing.id, login: existing.login, role: existing.role };
       }
+      this.logger.warn(`Admin creation failed: login already taken by non-admin`);
       throw new BadRequestException('Login already taken');
     }
 
@@ -147,6 +160,7 @@ export class AuthService {
       },
     });
 
+    this.logger.log(`Admin user created: id=${user.id}`);
     return { id: user.id, login: user.login, role: 'admin' };
   }
 }

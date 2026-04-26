@@ -40,6 +40,9 @@ export default defineConfig({
         'src/auth/decorators/**',
         'src/**/*.entity.ts',
         'src/const/**',
+        'src/logger/**',
+        'src/interceptors/**',
+        'src/filters/**',
       ],
       thresholds: {
         lines: 90,
