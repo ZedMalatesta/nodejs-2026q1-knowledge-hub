@@ -8,9 +8,9 @@ datasource db {
 }
 
 enum Role {
-  ADMIN
-  EDITOR
-  VIEWER
+  admin
+  editor
+  viewer
 }
 
 enum ArticleStatus {
@@ -23,7 +23,7 @@ model User {
   id        String    @id @default(uuid())
   login     String    @unique
   password  String
-  role      Role      @default(VIEWER)
+  role      Role      @default(viewer)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   articles  Article[]

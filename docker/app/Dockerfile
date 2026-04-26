@@ -26,10 +26,11 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./
 
-# Copy the pre-generated Prisma client from the build stage 
+# Copy the pre-generated Prisma client from the build stage
 # (avoids downloading engines during the build process)
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=build /app/node_modules/@prisma/client-runtime-utils ./node_modules/@prisma/client-runtime-utils
 
 USER node
 
