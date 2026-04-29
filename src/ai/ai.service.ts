@@ -4,6 +4,7 @@ import { GeminiService } from './gemini.service';
 import { NotFoundError } from '../errors/http.errors';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
+import { AnalyzeArticleDto } from './dto/analyze-article.dto';
 
 @Injectable()
 export class AiService {
@@ -76,5 +77,34 @@ export class AiService {
     );
 
     return { articleId, translatedText, detectedLanguage };
+  }
+
+  async analyzeArticle(articleId: string, dto: AnalyzeArticleDto) {
+    const article = await this.prisma.article.findUnique({
+      where: { id: articleId },
+    });
+
+    if (!article) {
+      this.logger.warn(`Article not found for analysis: id=${articleId}`);
+      throw new NotFoundError('Article not found');
+    }
+
+    const updatedAt =
+      article.updatedAt instanceof Date
+        ? article.updatedAt.getTime()
+        : (article.updatedAt as number);
+
+    this.logger.debug(
+      `Analyzing article id=${articleId} task=${dto.task ?? 'review'}`,
+    );
+
+    const { analysis, suggestions, severity } = await this.gemini.analyze(
+      articleId,
+      article.content,
+      updatedAt,
+      dto.task ?? 'review',
+    );
+
+    return { articleId, analysis, suggestions, severity };
   }
 }

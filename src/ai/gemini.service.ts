@@ -5,6 +5,24 @@ import {
 } from '../errors/http.errors';
 
 type MaxLength = 'short' | 'medium' | 'detailed';
+type AnalysisTask = 'review' | 'bugs' | 'optimize' | 'explain';
+type Severity = 'info' | 'warning' | 'error';
+
+interface AnalysisResult {
+  analysis: string;
+  suggestions: string[];
+  severity: Severity;
+}
+
+const TASK_PROMPTS: Record<AnalysisTask, string> = {
+  review:
+    'Review the following article for overall quality, clarity, and coherence.',
+  bugs: 'Find factual errors, logical inconsistencies, or misleading statements in the following article.',
+  optimize:
+    'Suggest improvements for structure, readability, and engagement for the following article.',
+  explain:
+    'Explain the key concepts, main arguments, and takeaways of the following article.',
+};
 
 interface CacheEntry {
   summary: string;
@@ -111,6 +129,83 @@ export class GeminiService {
       });
       return result;
     });
+  }
+
+  analyze(
+    articleId: string,
+    content: string,
+    updatedAt: number,
+    task: AnalysisTask = 'review',
+  ): Promise<AnalysisResult> {
+    const cacheKey = `${articleId}:${updatedAt}:analyze:${task}`;
+
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      this.logger.debug(`Cache hit for key=${cacheKey}`);
+      return Promise.resolve(JSON.parse(cached.summary) as AnalysisResult);
+    }
+
+    this.enforceRateLimit();
+    return this.callGeminiAnalyze(content, task).then((result) => {
+      this.cache.set(cacheKey, {
+        summary: JSON.stringify(result),
+        expiresAt: Date.now() + this.cacheTtlMs,
+      });
+      return result;
+    });
+  }
+
+  private async callGeminiAnalyze(
+    content: string,
+    task: AnalysisTask,
+  ): Promise<AnalysisResult> {
+    const prompt =
+      `${TASK_PROMPTS[task]}\n` +
+      `Respond with a JSON object only — no markdown, no extra text — in this exact shape:\n` +
+      `{"analysis":"<overall analysis>","suggestions":["<suggestion1>","<suggestion2>"],"severity":"info|warning|error"}\n\n` +
+      `Article:\n${content}`;
+
+    const raw = await this.callGeminiRaw(prompt);
+    if (!raw) {
+      this.logger.error('Gemini API returned empty content for analysis');
+      throw new ServiceUnavailableError(
+        'AI service returned an empty response — please try again later',
+      );
+    }
+
+    try {
+      const json = raw
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
+      const parsed = JSON.parse(json) as {
+        analysis?: string;
+        suggestions?: unknown;
+        severity?: string;
+      };
+
+      const validSeverities: Severity[] = ['info', 'warning', 'error'];
+      const severity = validSeverities.includes(parsed.severity as Severity)
+        ? (parsed.severity as Severity)
+        : 'info';
+
+      const suggestions = Array.isArray(parsed.suggestions)
+        ? (parsed.suggestions as unknown[]).filter(
+            (s): s is string => typeof s === 'string',
+          )
+        : [];
+
+      if (!parsed.analysis) {
+        throw new Error('missing analysis field');
+      }
+
+      return { analysis: parsed.analysis, suggestions, severity };
+    } catch {
+      this.logger.error(`Failed to parse Gemini analysis response: ${raw}`);
+      throw new ServiceUnavailableError(
+        'AI service returned an unexpected format — please try again later',
+      );
+    }
   }
 
   private async callGemini(

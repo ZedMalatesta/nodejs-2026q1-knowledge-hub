@@ -3,6 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
+import { AnalyzeArticleDto } from './dto/analyze-article.dto';
 import { ParseUuidPipe } from 'src/pipes/parse-uuid.pipe';
 
 @ApiTags('ai')
@@ -26,5 +27,14 @@ export class AiController {
     @Body() dto: TranslateArticleDto,
   ) {
     return this.aiService.translateArticle(articleId, dto);
+  }
+
+  @Post('articles/:articleId/analyze')
+  @HttpCode(200)
+  analyze(
+    @Param('articleId', new ParseUuidPipe()) articleId: string,
+    @Body() dto: AnalyzeArticleDto,
+  ) {
+    return this.aiService.analyzeArticle(articleId, dto);
   }
 }
