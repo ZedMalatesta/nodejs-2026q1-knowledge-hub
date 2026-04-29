@@ -37,3 +37,15 @@ export class UnprocessableEntityError extends AppError {
     super(422, message);
   }
 }
+
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many requests') {
+    super(429, message);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message = 'Service unavailable') {
+    super(503, message);
+  }
+}
