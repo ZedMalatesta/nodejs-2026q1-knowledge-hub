@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from './gemini.service';
 import { NotFoundError } from '../errors/http.errors';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
+import { TranslateArticleDto } from './dto/translate-article.dto';
 
 @Injectable()
 export class AiService {
@@ -45,5 +46,35 @@ export class AiService {
       originalLength: article.content.length,
       summaryLength: summary.length,
     };
+  }
+
+  async translateArticle(articleId: string, dto: TranslateArticleDto) {
+    const article = await this.prisma.article.findUnique({
+      where: { id: articleId },
+    });
+
+    if (!article) {
+      this.logger.warn(`Article not found for translation: id=${articleId}`);
+      throw new NotFoundError('Article not found');
+    }
+
+    const updatedAt =
+      article.updatedAt instanceof Date
+        ? article.updatedAt.getTime()
+        : (article.updatedAt as number);
+
+    this.logger.debug(
+      `Translating article id=${articleId} target=${dto.targetLanguage}`,
+    );
+
+    const { translatedText, detectedLanguage } = await this.gemini.translate(
+      articleId,
+      article.content,
+      updatedAt,
+      dto.targetLanguage,
+      dto.sourceLanguage,
+    );
+
+    return { articleId, translatedText, detectedLanguage };
   }
 }

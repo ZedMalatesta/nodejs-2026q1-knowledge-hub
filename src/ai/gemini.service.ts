@@ -79,6 +79,40 @@ export class GeminiService {
     this.requestTimestamps.push(now);
   }
 
+  translate(
+    articleId: string,
+    content: string,
+    updatedAt: number,
+    targetLanguage: string,
+    sourceLanguage?: string,
+  ): Promise<{ translatedText: string; detectedLanguage: string }> {
+    const cacheKey = `${articleId}:${updatedAt}:translate:${targetLanguage}:${sourceLanguage ?? 'auto'}`;
+
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      this.logger.debug(`Cache hit for key=${cacheKey}`);
+      return Promise.resolve(
+        JSON.parse(cached.summary) as {
+          translatedText: string;
+          detectedLanguage: string;
+        },
+      );
+    }
+
+    this.enforceRateLimit();
+    return this.callGeminiTranslate(
+      content,
+      targetLanguage,
+      sourceLanguage,
+    ).then((result) => {
+      this.cache.set(cacheKey, {
+        summary: JSON.stringify(result),
+        expiresAt: Date.now() + this.cacheTtlMs,
+      });
+      return result;
+    });
+  }
+
   private async callGemini(
     content: string,
     maxLength: MaxLength,
@@ -88,6 +122,68 @@ export class GeminiService {
       `Summarize the following article in at most ${words} words. ` +
       `Return only the summary text, no preamble.\n\n${content}`;
 
+    return this.callGeminiRaw(prompt).then((text) => {
+      if (!text) {
+        this.logger.error('Gemini API returned empty content');
+        throw new ServiceUnavailableError(
+          'AI service returned an empty response — please try again later',
+        );
+      }
+      return text;
+    });
+  }
+
+  private async callGeminiTranslate(
+    content: string,
+    targetLanguage: string,
+    sourceLanguage?: string,
+  ): Promise<{ translatedText: string; detectedLanguage: string }> {
+    const sourcePart = sourceLanguage
+      ? `The source language is ${sourceLanguage}.`
+      : 'Detect the source language automatically.';
+
+    const prompt =
+      `Translate the following article into ${targetLanguage}. ${sourcePart}\n` +
+      `Respond with a JSON object only — no markdown, no extra text — in this exact shape:\n` +
+      `{"translatedText":"<translation>","detectedLanguage":"<detected source language>"}\n\n` +
+      `Article:\n${content}`;
+
+    const raw = await this.callGeminiRaw(prompt);
+    if (!raw) {
+      this.logger.error('Gemini API returned empty content for translation');
+      throw new ServiceUnavailableError(
+        'AI service returned an empty response — please try again later',
+      );
+    }
+
+    try {
+      // strip optional markdown fences Gemini sometimes wraps around JSON
+      const json = raw
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
+      const parsed = JSON.parse(json) as {
+        translatedText?: string;
+        detectedLanguage?: string;
+      };
+
+      if (!parsed.translatedText || !parsed.detectedLanguage) {
+        throw new Error('missing fields');
+      }
+
+      return {
+        translatedText: parsed.translatedText,
+        detectedLanguage: parsed.detectedLanguage,
+      };
+    } catch {
+      this.logger.error(`Failed to parse Gemini translation response: ${raw}`);
+      throw new ServiceUnavailableError(
+        'AI service returned an unexpected format — please try again later',
+      );
+    }
+  }
+
+  private async callGeminiRaw(prompt: string): Promise<string> {
     const url = `${this.baseUrl}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     let response: Response;
@@ -119,14 +215,6 @@ export class GeminiService {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
     };
 
-    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (!summary) {
-      this.logger.error('Gemini API returned empty content');
-      throw new ServiceUnavailableError(
-        'AI service returned an empty response — please try again later',
-      );
-    }
-
-    return summary;
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
   }
 }
