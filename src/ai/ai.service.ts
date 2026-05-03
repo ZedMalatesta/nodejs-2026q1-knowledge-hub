@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from './gemini.service';
+import { AiUsageService } from './ai-usage.service';
 import { NotFoundError } from '../errors/http.errors';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
@@ -13,6 +14,7 @@ export class AiService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gemini: GeminiService,
+    private readonly usage: AiUsageService,
   ) {}
 
   async summarizeArticle(articleId: string, dto: SummarizeArticleDto) {
@@ -34,12 +36,13 @@ export class AiService {
       `Summarizing article id=${articleId} maxLength=${dto.maxLength ?? 'medium'}`,
     );
 
-    const summary = await this.gemini.summarize(
+    const { summary, tokens } = await this.gemini.summarize(
       articleId,
       article.content,
       updatedAt,
       dto.maxLength ?? 'medium',
     );
+    this.usage.track('summarize', tokens);
 
     return {
       articleId,
@@ -68,13 +71,14 @@ export class AiService {
       `Translating article id=${articleId} target=${dto.targetLanguage}`,
     );
 
-    const { translatedText, detectedLanguage } = await this.gemini.translate(
+    const { translatedText, detectedLanguage, tokens } = await this.gemini.translate(
       articleId,
       article.content,
       updatedAt,
       dto.targetLanguage,
       dto.sourceLanguage,
     );
+    this.usage.track('translate', tokens);
 
     return { articleId, translatedText, detectedLanguage };
   }
@@ -98,13 +102,18 @@ export class AiService {
       `Analyzing article id=${articleId} task=${dto.task ?? 'review'}`,
     );
 
-    const { analysis, suggestions, severity } = await this.gemini.analyze(
+    const { analysis, suggestions, severity, tokens } = await this.gemini.analyze(
       articleId,
       article.content,
       updatedAt,
       dto.task ?? 'review',
     );
+    this.usage.track('analyze', tokens);
 
     return { articleId, analysis, suggestions, severity };
+  }
+
+  getUsage() {
+    return this.usage.getStats();
   }
 }

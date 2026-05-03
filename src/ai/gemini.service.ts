@@ -20,8 +20,13 @@ interface AnalysisResult {
 }
 
 interface CacheEntry {
-  summary: string;
+  value: string;
   expiresAt: number;
+}
+
+interface GeminiApiResponse {
+  candidates?: { content?: { parts?: { text?: string }[] } }[];
+  usageMetadata?: { totalTokenCount?: number };
 }
 
 @Injectable()
@@ -40,35 +45,78 @@ export class GeminiService {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly requestTimestamps: number[] = [];
 
-  summarize(
+  async summarize(
     articleId: string,
     content: string,
     updatedAt: number,
     maxLength: MaxLength = 'medium',
-  ): Promise<string> {
-    const cacheKey = `${articleId}:${updatedAt}:${maxLength}`;
-
-    const cached = this.cache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      this.logger.debug(`Cache hit for key=${cacheKey}`);
-      return Promise.resolve(cached.summary);
-    }
+  ): Promise<{ summary: string; tokens: number }> {
+    const cacheKey = `${articleId}:${updatedAt}:summarize:${maxLength}`;
+    const cached = this.fromCache(cacheKey);
+    if (cached !== null) return { summary: cached, tokens: 0 };
 
     this.enforceRateLimit();
-    return this.callGemini(content, maxLength).then((summary) => {
-      this.cache.set(cacheKey, {
-        summary,
-        expiresAt: Date.now() + this.cacheTtlMs,
-      });
-      return summary;
-    });
+    const { text, tokens } = await this.callGemini(content, maxLength);
+    this.toCache(cacheKey, text);
+    return { summary: text, tokens };
+  }
+
+  async translate(
+    articleId: string,
+    content: string,
+    updatedAt: number,
+    targetLanguage: string,
+    sourceLanguage?: string,
+  ): Promise<{ translatedText: string; detectedLanguage: string; tokens: number }> {
+    const cacheKey = `${articleId}:${updatedAt}:translate:${targetLanguage}:${sourceLanguage ?? 'auto'}`;
+    const cached = this.fromCache(cacheKey);
+    if (cached !== null)
+      return {
+        ...(JSON.parse(cached) as { translatedText: string; detectedLanguage: string }),
+        tokens: 0,
+      };
+
+    this.enforceRateLimit();
+    const { translatedText, detectedLanguage, tokens } = await this.callGeminiTranslate(
+      content,
+      targetLanguage,
+      sourceLanguage,
+    );
+    this.toCache(cacheKey, JSON.stringify({ translatedText, detectedLanguage }));
+    return { translatedText, detectedLanguage, tokens };
+  }
+
+  async analyze(
+    articleId: string,
+    content: string,
+    updatedAt: number,
+    task: AnalysisTask = 'review',
+  ): Promise<AnalysisResult & { tokens: number }> {
+    const cacheKey = `${articleId}:${updatedAt}:analyze:${task}`;
+    const cached = this.fromCache(cacheKey);
+    if (cached !== null) return { ...(JSON.parse(cached) as AnalysisResult), tokens: 0 };
+
+    this.enforceRateLimit();
+    const result = await this.callGeminiAnalyze(content, task);
+    this.toCache(cacheKey, JSON.stringify(result));
+    return result;
+  }
+
+  private fromCache(key: string): string | null {
+    const entry = this.cache.get(key);
+    if (!entry || entry.expiresAt <= Date.now()) return null;
+    this.logger.debug(`Cache hit for key=${key}`);
+    return entry.value;
+  }
+
+  private toCache(key: string, value: string): void {
+    this.cache.set(key, { value, expiresAt: Date.now() + this.cacheTtlMs });
   }
 
   private enforceRateLimit(): void {
     const now = Date.now();
     const windowStart = now - 60_000;
 
-    // evict timestamps outside the sliding window
     while (
       this.requestTimestamps.length > 0 &&
       this.requestTimestamps[0] < windowStart
@@ -90,71 +138,11 @@ export class GeminiService {
     this.requestTimestamps.push(now);
   }
 
-  translate(
-    articleId: string,
-    content: string,
-    updatedAt: number,
-    targetLanguage: string,
-    sourceLanguage?: string,
-  ): Promise<{ translatedText: string; detectedLanguage: string }> {
-    const cacheKey = `${articleId}:${updatedAt}:translate:${targetLanguage}:${sourceLanguage ?? 'auto'}`;
-
-    const cached = this.cache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      this.logger.debug(`Cache hit for key=${cacheKey}`);
-      return Promise.resolve(
-        JSON.parse(cached.summary) as {
-          translatedText: string;
-          detectedLanguage: string;
-        },
-      );
-    }
-
-    this.enforceRateLimit();
-    return this.callGeminiTranslate(
-      content,
-      targetLanguage,
-      sourceLanguage,
-    ).then((result) => {
-      this.cache.set(cacheKey, {
-        summary: JSON.stringify(result),
-        expiresAt: Date.now() + this.cacheTtlMs,
-      });
-      return result;
-    });
-  }
-
-  analyze(
-    articleId: string,
-    content: string,
-    updatedAt: number,
-    task: AnalysisTask = 'review',
-  ): Promise<AnalysisResult> {
-    const cacheKey = `${articleId}:${updatedAt}:analyze:${task}`;
-
-    const cached = this.cache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      this.logger.debug(`Cache hit for key=${cacheKey}`);
-      return Promise.resolve(JSON.parse(cached.summary) as AnalysisResult);
-    }
-
-    this.enforceRateLimit();
-    return this.callGeminiAnalyze(content, task).then((result) => {
-      this.cache.set(cacheKey, {
-        summary: JSON.stringify(result),
-        expiresAt: Date.now() + this.cacheTtlMs,
-      });
-      return result;
-    });
-  }
-
   private async callGeminiAnalyze(
     content: string,
     task: AnalysisTask,
-  ): Promise<AnalysisResult> {
-    const prompt = buildAnalyzePrompt(content, task);
-
-    const raw = await this.callGeminiRaw(prompt);
+  ): Promise<AnalysisResult & { tokens: number }> {
+    const { text: raw, tokens } = await this.callGeminiRaw(buildAnalyzePrompt(content, task));
     if (!raw) {
       this.logger.error('Gemini API returned empty content for analysis');
       throw new ServiceUnavailableError(
@@ -188,7 +176,7 @@ export class GeminiService {
         throw new Error('missing analysis field');
       }
 
-      return { analysis: parsed.analysis, suggestions, severity };
+      return { analysis: parsed.analysis, suggestions, severity, tokens };
     } catch {
       this.logger.error(`Failed to parse Gemini analysis response: ${raw}`);
       throw new ServiceUnavailableError(
@@ -200,28 +188,25 @@ export class GeminiService {
   private async callGemini(
     content: string,
     maxLength: MaxLength,
-  ): Promise<string> {
-    const prompt = buildSummarizePrompt(content, maxLength);
-
-    return this.callGeminiRaw(prompt).then((text) => {
-      if (!text) {
-        this.logger.error('Gemini API returned empty content');
-        throw new ServiceUnavailableError(
-          'AI service returned an empty response — please try again later',
-        );
-      }
-      return text;
-    });
+  ): Promise<{ text: string; tokens: number }> {
+    const { text, tokens } = await this.callGeminiRaw(buildSummarizePrompt(content, maxLength));
+    if (!text) {
+      this.logger.error('Gemini API returned empty content');
+      throw new ServiceUnavailableError(
+        'AI service returned an empty response — please try again later',
+      );
+    }
+    return { text, tokens };
   }
 
   private async callGeminiTranslate(
     content: string,
     targetLanguage: string,
     sourceLanguage?: string,
-  ): Promise<{ translatedText: string; detectedLanguage: string }> {
-    const prompt = buildTranslatePrompt(content, targetLanguage, sourceLanguage);
-
-    const raw = await this.callGeminiRaw(prompt);
+  ): Promise<{ translatedText: string; detectedLanguage: string; tokens: number }> {
+    const { text: raw, tokens } = await this.callGeminiRaw(
+      buildTranslatePrompt(content, targetLanguage, sourceLanguage),
+    );
     if (!raw) {
       this.logger.error('Gemini API returned empty content for translation');
       throw new ServiceUnavailableError(
@@ -230,7 +215,6 @@ export class GeminiService {
     }
 
     try {
-      // strip optional markdown fences Gemini sometimes wraps around JSON
       const json = raw
         .replace(/^```(?:json)?\s*/i, '')
         .replace(/\s*```$/, '')
@@ -247,6 +231,7 @@ export class GeminiService {
       return {
         translatedText: parsed.translatedText,
         detectedLanguage: parsed.detectedLanguage,
+        tokens,
       };
     } catch {
       this.logger.error(`Failed to parse Gemini translation response: ${raw}`);
@@ -256,7 +241,7 @@ export class GeminiService {
     }
   }
 
-  private async callGeminiRaw(prompt: string): Promise<string> {
+  private async callGeminiRaw(prompt: string): Promise<{ text: string; tokens: number }> {
     const url = `${this.baseUrl}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     let response: Response;
@@ -284,10 +269,9 @@ export class GeminiService {
       );
     }
 
-    const data = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
+    const data = (await response.json()) as GeminiApiResponse;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
+    const tokens = data.usageMetadata?.totalTokenCount ?? 0;
+    return { text, tokens };
   }
 }

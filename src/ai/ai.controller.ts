@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
@@ -36,5 +36,10 @@ export class AiController {
     @Body() dto: AnalyzeArticleDto,
   ) {
     return this.aiService.analyzeArticle(articleId, dto);
+  }
+
+  @Get('usage')
+  getUsage() {
+    return this.aiService.getUsage();
   }
 }
