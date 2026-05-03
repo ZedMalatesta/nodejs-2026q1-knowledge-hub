@@ -3,7 +3,7 @@ FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy the whole project (including the locally generated Prisma client which was un-ignored in .dockerignore)
 COPY . .
@@ -20,7 +20,7 @@ WORKDIR /app
 RUN apk add --no-cache curl bash git
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy build artifacts
 COPY --from=build /app/dist ./dist
@@ -34,6 +34,8 @@ COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=build /app/node_modules/@prisma/client-runtime-utils ./node_modules/@prisma/client-runtime-utils
 
 COPY docker/app/entrypoint.sh ./entrypoint.sh
+
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
 
 USER node
 

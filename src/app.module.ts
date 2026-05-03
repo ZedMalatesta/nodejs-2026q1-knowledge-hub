@@ -7,6 +7,7 @@ import { ArticlesModule } from './articles/articles.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CommentsModule } from './comments/comments.module';
 import { AuthModule } from './auth/auth.module';
+import { AiModule } from './ai/ai.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
@@ -23,6 +24,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     CategoriesModule,
     CommentsModule,
     AuthModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

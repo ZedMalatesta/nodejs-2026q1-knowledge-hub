@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { STATUS_CODES } from 'http';
-import { AppError } from '../errors/http.errors';
+import { AppError, TooManyRequestsError } from '../errors/http.errors';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -29,6 +29,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof AppError) {
       const { statusCode } = exception;
+      if (exception instanceof TooManyRequestsError && exception.retryAfterSec !== undefined) {
+        response.setHeader('Retry-After', String(exception.retryAfterSec));
+      }
       response.status(statusCode).json({
         statusCode,
         error: STATUS_CODES[statusCode] ?? 'Error',
