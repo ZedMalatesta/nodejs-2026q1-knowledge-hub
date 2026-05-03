@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  AppError,
   TooManyRequestsError,
   ServiceUnavailableError,
 } from '../errors/http.errors';
@@ -242,36 +243,80 @@ export class GeminiService {
   }
 
   private async callGeminiRaw(prompt: string): Promise<{ text: string; tokens: number }> {
+    // NOTE: URL contains the API key — never log it
     const url = `${this.baseUrl}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const requestBody = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
+    const MAX_RETRIES = 3;
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Gemini API unreachable: ${message}`);
-      throw new ServiceUnavailableError(
-        'AI service is currently unavailable — please try again later',
-      );
-    }
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const delayMs = Math.pow(2, attempt - 1) * 1000; // 1 s, 2 s, 4 s
+        this.logger.warn(
+          `Retrying Gemini API (attempt ${attempt}/${MAX_RETRIES}) after ${delayMs}ms`,
+        );
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+      }
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      this.logger.error(`Gemini API error ${response.status}: ${body}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: requestBody,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err instanceof Error && err.name === 'AbortError') {
+          this.logger.error('Gemini API request timed out');
+          throw new ServiceUnavailableError(
+            'AI service request timed out — please try again later',
+          );
+        }
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Gemini API unreachable: ${message}`);
+        throw new ServiceUnavailableError(
+          'AI service is currently unavailable — please try again later',
+        );
+      }
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = (await response.json()) as GeminiApiResponse;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
+        const tokens = data.usageMetadata?.totalTokenCount ?? 0;
+        return { text, tokens };
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        // Log status only — never log the key or the full URL
+        this.logger.error(`Gemini API authentication error: HTTP ${response.status}`);
+        throw new AppError(500, 'AI service configuration error — please contact support');
+      }
+
+      if (response.status === 429) {
+        if (attempt < MAX_RETRIES) {
+          this.logger.warn(`Gemini upstream rate limit on attempt ${attempt + 1}, will retry`);
+          continue;
+        }
+        this.logger.error('Gemini upstream rate limit persists after all retries');
+        throw new ServiceUnavailableError(
+          'AI service is temporarily overloaded — please try again later',
+        );
+      }
+
+      const responseText = await response.text().catch(() => '');
+      this.logger.error(`Gemini API error ${response.status}: ${responseText}`);
       throw new ServiceUnavailableError(
         `AI service returned an error (${response.status}) — please try again later`,
       );
     }
 
-    const data = (await response.json()) as GeminiApiResponse;
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
-    const tokens = data.usageMetadata?.totalTokenCount ?? 0;
-    return { text, tokens };
+    throw new ServiceUnavailableError(
+      'AI service failed after retries — please try again later',
+    );
   }
 }
