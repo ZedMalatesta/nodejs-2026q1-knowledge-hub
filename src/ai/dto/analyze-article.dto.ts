@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AnalyzeArticleDto {
@@ -7,6 +7,7 @@ export class AnalyzeArticleDto {
     default: 'review',
   })
   @IsOptional()
+  @IsString()
   @IsEnum(['review', 'bugs', 'optimize', 'explain'])
   task?: 'review' | 'bugs' | 'optimize' | 'explain';
 }
