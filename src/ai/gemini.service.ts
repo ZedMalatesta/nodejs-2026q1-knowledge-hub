@@ -3,9 +3,14 @@ import {
   TooManyRequestsError,
   ServiceUnavailableError,
 } from '../errors/http.errors';
+import {
+  AnalysisTask,
+  MaxLength,
+  buildAnalyzePrompt,
+  buildSummarizePrompt,
+  buildTranslatePrompt,
+} from './prompts/ai.prompts';
 
-type MaxLength = 'short' | 'medium' | 'detailed';
-type AnalysisTask = 'review' | 'bugs' | 'optimize' | 'explain';
 type Severity = 'info' | 'warning' | 'error';
 
 interface AnalysisResult {
@@ -14,26 +19,10 @@ interface AnalysisResult {
   severity: Severity;
 }
 
-const TASK_PROMPTS: Record<AnalysisTask, string> = {
-  review:
-    'Review the following article for overall quality, clarity, and coherence.',
-  bugs: 'Find factual errors, logical inconsistencies, or misleading statements in the following article.',
-  optimize:
-    'Suggest improvements for structure, readability, and engagement for the following article.',
-  explain:
-    'Explain the key concepts, main arguments, and takeaways of the following article.',
-};
-
 interface CacheEntry {
   summary: string;
   expiresAt: number;
 }
-
-const MAX_WORDS: Record<MaxLength, number> = {
-  short: 100,
-  medium: 250,
-  detailed: 500,
-};
 
 @Injectable()
 export class GeminiService {
@@ -159,11 +148,7 @@ export class GeminiService {
     content: string,
     task: AnalysisTask,
   ): Promise<AnalysisResult> {
-    const prompt =
-      `${TASK_PROMPTS[task]}\n` +
-      `Respond with a JSON object only — no markdown, no extra text — in this exact shape:\n` +
-      `{"analysis":"<overall analysis>","suggestions":["<suggestion1>","<suggestion2>"],"severity":"info|warning|error"}\n\n` +
-      `Article:\n${content}`;
+    const prompt = buildAnalyzePrompt(content, task);
 
     const raw = await this.callGeminiRaw(prompt);
     if (!raw) {
@@ -212,10 +197,7 @@ export class GeminiService {
     content: string,
     maxLength: MaxLength,
   ): Promise<string> {
-    const words = MAX_WORDS[maxLength];
-    const prompt =
-      `Summarize the following article in at most ${words} words. ` +
-      `Return only the summary text, no preamble.\n\n${content}`;
+    const prompt = buildSummarizePrompt(content, maxLength);
 
     return this.callGeminiRaw(prompt).then((text) => {
       if (!text) {
@@ -233,15 +215,7 @@ export class GeminiService {
     targetLanguage: string,
     sourceLanguage?: string,
   ): Promise<{ translatedText: string; detectedLanguage: string }> {
-    const sourcePart = sourceLanguage
-      ? `The source language is ${sourceLanguage}.`
-      : 'Detect the source language automatically.';
-
-    const prompt =
-      `Translate the following article into ${targetLanguage}. ${sourcePart}\n` +
-      `Respond with a JSON object only — no markdown, no extra text — in this exact shape:\n` +
-      `{"translatedText":"<translation>","detectedLanguage":"<detected source language>"}\n\n` +
-      `Article:\n${content}`;
+    const prompt = buildTranslatePrompt(content, targetLanguage, sourceLanguage);
 
     const raw = await this.callGeminiRaw(prompt);
     if (!raw) {
