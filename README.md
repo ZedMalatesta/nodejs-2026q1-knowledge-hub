@@ -13,6 +13,7 @@ A RESTful API built with NestJS, PostgreSQL, and Prisma. Supports JWT authentica
 - [Database](#database)
 - [Running the Application](#running-the-application)
 - [API Documentation](#api-documentation)
+- [AI Integration (Gemini)](#ai-integration-gemini)
 - [Testing](#testing)
 - [Logging](#logging)
 - [Linting & Formatting](#linting--formatting)
@@ -194,6 +195,74 @@ All endpoints require a **Bearer token** in the `Authorization` header except:
 | Create / edit / delete articles & comments | ✓ | own only | ✗ |
 | Manage categories | ✓ | ✗ | ✗ |
 | Manage users | ✓ | ✗ | ✗ |
+
+---
+
+## AI Integration (Gemini)
+
+The API includes AI-powered endpoints backed by the **Google Gemini API** (model: `gemini-2.0-flash`).
+
+### Obtaining a Gemini API key
+
+1. Go to [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) and sign in with a Google account.
+2. Click **Create API key** and select or create a Google Cloud project.
+3. Copy the generated key — it starts with `AIza...`.
+4. Open your `.env` file and paste the key:
+
+   ```env
+   GEMINI_API_KEY=AIza...your-key-here...
+   ```
+
+The free tier provides sufficient quota for development and testing.
+
+### AI environment variables
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `GEMINI_API_KEY` | Your Gemini API key | *(required)* |
+| `GEMINI_API_BASE_URL` | Gemini API base URL | `https://generativelanguage.googleapis.com` |
+| `GEMINI_MODEL` | Model name | `gemini-2.0-flash` |
+| `AI_RATE_LIMIT_RPM` | Max AI requests per minute | `20` |
+| `AI_CACHE_TTL_SEC` | In-memory cache TTL in seconds | `300` |
+
+### AI endpoints
+
+All AI endpoints require a valid Bearer token (any role).
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/ai/articles/:articleId/summarize` | Summarize an article (`maxLength`: `short` / `medium` / `detailed`) |
+| `POST` | `/ai/articles/:articleId/translate` | Translate an article (`targetLanguage` required) |
+| `POST` | `/ai/articles/:articleId/analyze` | Analyze an article (`task`: `review` / `bugs` / `optimize` / `explain`) |
+| `POST` | `/ai/generate` | Free-form prompt (rate-limited) |
+| `GET` | `/ai/usage` | In-memory usage stats (requests, tokens by endpoint) |
+
+#### Quick test (replace `TOKEN` and `ARTICLE_ID`)
+
+```bash
+# Summarize
+curl -X POST http://localhost:4000/ai/articles/ARTICLE_ID/summarize \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"maxLength": "short"}'
+
+# Free-form generation
+curl -X POST http://localhost:4000/ai/generate \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain dependency injection in one paragraph."}'
+
+# Usage stats
+curl http://localhost:4000/ai/usage \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Known limitations
+
+- **Free-tier quota**: The Gemini free tier allows ~15 requests/minute and 1 500 requests/day. `AI_RATE_LIMIT_RPM=20` is set conservatively but you may still hit upstream 429s under sustained load — the service retries up to 3 times with exponential backoff before returning 503.
+- **Latency**: Gemini responses typically take 1–5 seconds per request. Cached responses (summarize, translate, analyze) return instantly on repeat calls within the TTL window.
+- **Regional availability**: The Gemini API may not be available in all regions. If you receive persistent 403 errors, check [Google's availability page](https://ai.google.dev/gemini-api/docs/available-regions) or use a VPN.
+- **In-memory cache and usage stats**: Both are reset on every server restart. They are not shared across multiple instances.
 
 ---
 
