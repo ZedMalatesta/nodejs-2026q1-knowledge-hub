@@ -35,6 +35,8 @@ COPY --from=build /app/node_modules/@prisma/client-runtime-utils ./node_modules/
 
 COPY docker/app/entrypoint.sh ./entrypoint.sh
 
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
+
 USER node
 
 ENV NODE_ENV=production
