@@ -2,7 +2,7 @@ import { IsOptional, IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TranslateArticleDto {
-  @ApiProperty({ example: 'Spanish' })
+  @ApiProperty({ example: 'Portuguese' })
   @IsString()
   @IsNotEmpty()
   targetLanguage: string;

@@ -39,7 +39,10 @@ export class UnprocessableEntityError extends AppError {
 }
 
 export class TooManyRequestsError extends AppError {
-  constructor(message = 'Too many requests') {
+  constructor(
+    message = 'Too many requests',
+    public readonly retryAfterSec?: number,
+  ) {
     super(429, message);
   }
 }

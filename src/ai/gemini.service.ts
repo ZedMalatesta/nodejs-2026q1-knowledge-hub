@@ -77,9 +77,13 @@ export class GeminiService {
     }
 
     if (this.requestTimestamps.length >= this.maxRpm) {
+      const retryAfterSec = Math.ceil(
+        (this.requestTimestamps[0] + 60_000 - now) / 1000,
+      );
       this.logger.warn('AI rate limit exceeded');
       throw new TooManyRequestsError(
         'AI rate limit exceeded — please try again in a moment',
+        retryAfterSec,
       );
     }
 
