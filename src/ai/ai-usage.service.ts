@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-export type AiEndpoint = 'summarize' | 'translate' | 'analyze';
+export type AiEndpoint = 'summarize' | 'translate' | 'analyze' | 'generate';
 
 @Injectable()
 export class AiUsageService {
@@ -11,6 +11,7 @@ export class AiUsageService {
     summarize: { requests: 0, tokens: 0 },
     translate: { requests: 0, tokens: 0 },
     analyze: { requests: 0, tokens: 0 },
+    generate: { requests: 0, tokens: 0 },
   };
 
   track(endpoint: AiEndpoint, tokens = 0): void {

@@ -103,6 +103,18 @@ export class GeminiService {
     return result;
   }
 
+  async generate(prompt: string): Promise<{ text: string; tokens: number }> {
+    this.enforceRateLimit();
+    const { text, tokens } = await this.callGeminiRaw(prompt);
+    if (!text) {
+      this.logger.error('Gemini API returned empty content for generate');
+      throw new ServiceUnavailableError(
+        'AI service returned an empty response — please try again later',
+      );
+    }
+    return { text, tokens };
+  }
+
   private fromCache(key: string): string | null {
     const entry = this.cache.get(key);
     if (!entry || entry.expiresAt <= Date.now()) return null;

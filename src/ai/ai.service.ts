@@ -6,6 +6,7 @@ import { NotFoundError } from '../errors/http.errors';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
 import { AnalyzeArticleDto } from './dto/analyze-article.dto';
+import { GenerateDto } from './dto/generate.dto';
 
 @Injectable()
 export class AiService {
@@ -71,13 +72,14 @@ export class AiService {
       `Translating article id=${articleId} target=${dto.targetLanguage}`,
     );
 
-    const { translatedText, detectedLanguage, tokens } = await this.gemini.translate(
-      articleId,
-      article.content,
-      updatedAt,
-      dto.targetLanguage,
-      dto.sourceLanguage,
-    );
+    const { translatedText, detectedLanguage, tokens } =
+      await this.gemini.translate(
+        articleId,
+        article.content,
+        updatedAt,
+        dto.targetLanguage,
+        dto.sourceLanguage,
+      );
     this.usage.track('translate', tokens);
 
     return { articleId, translatedText, detectedLanguage };
@@ -102,15 +104,25 @@ export class AiService {
       `Analyzing article id=${articleId} task=${dto.task ?? 'review'}`,
     );
 
-    const { analysis, suggestions, severity, tokens } = await this.gemini.analyze(
-      articleId,
-      article.content,
-      updatedAt,
-      dto.task ?? 'review',
-    );
+    const { analysis, suggestions, severity, tokens } =
+      await this.gemini.analyze(
+        articleId,
+        article.content,
+        updatedAt,
+        dto.task ?? 'review',
+      );
     this.usage.track('analyze', tokens);
 
     return { articleId, analysis, suggestions, severity };
+  }
+
+  async generate(dto: GenerateDto) {
+    this.logger.debug(
+      `Free-form generate request promptLength=${dto.prompt.length}`,
+    );
+    const { text, tokens } = await this.gemini.generate(dto.prompt);
+    this.usage.track('generate', tokens);
+    return { result: text, tokens };
   }
 
   getUsage() {

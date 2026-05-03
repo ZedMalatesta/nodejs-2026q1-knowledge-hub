@@ -1,9 +1,11 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AiService } from './ai.service';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
 import { AnalyzeArticleDto } from './dto/analyze-article.dto';
+import { GenerateDto } from './dto/generate.dto';
 import { ParseUuidPipe } from 'src/pipes/parse-uuid.pipe';
 
 @ApiTags('ai')
@@ -36,6 +38,13 @@ export class AiController {
     @Body() dto: AnalyzeArticleDto,
   ) {
     return this.aiService.analyzeArticle(articleId, dto);
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Post('generate')
+  @HttpCode(200)
+  generate(@Body() dto: GenerateDto) {
+    return this.aiService.generate(dto);
   }
 
   @Get('usage')
