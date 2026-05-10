@@ -30,6 +30,16 @@ interface GeminiApiResponse {
   usageMetadata?: { totalTokenCount?: number };
 }
 
+interface GeminiContent {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
+export interface ConversationTurn {
+  role: 'user' | 'model';
+  text: string;
+}
+
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
@@ -51,15 +61,15 @@ export class GeminiService {
     content: string,
     updatedAt: number,
     maxLength: MaxLength = 'medium',
-  ): Promise<{ summary: string; tokens: number }> {
+  ): Promise<{ summary: string; tokens: number; cacheHit: boolean }> {
     const cacheKey = `${articleId}:${updatedAt}:summarize:${maxLength}`;
     const cached = this.fromCache(cacheKey);
-    if (cached !== null) return { summary: cached, tokens: 0 };
+    if (cached !== null) return { summary: cached, tokens: 0, cacheHit: true };
 
     this.enforceRateLimit();
     const { text, tokens } = await this.callGemini(content, maxLength);
     this.toCache(cacheKey, text);
-    return { summary: text, tokens };
+    return { summary: text, tokens, cacheHit: false };
   }
 
   async translate(
@@ -68,13 +78,14 @@ export class GeminiService {
     updatedAt: number,
     targetLanguage: string,
     sourceLanguage?: string,
-  ): Promise<{ translatedText: string; detectedLanguage: string; tokens: number }> {
+  ): Promise<{ translatedText: string; detectedLanguage: string; tokens: number; cacheHit: boolean }> {
     const cacheKey = `${articleId}:${updatedAt}:translate:${targetLanguage}:${sourceLanguage ?? 'auto'}`;
     const cached = this.fromCache(cacheKey);
     if (cached !== null)
       return {
         ...(JSON.parse(cached) as { translatedText: string; detectedLanguage: string }),
         tokens: 0,
+        cacheHit: true,
       };
 
     this.enforceRateLimit();
@@ -84,7 +95,7 @@ export class GeminiService {
       sourceLanguage,
     );
     this.toCache(cacheKey, JSON.stringify({ translatedText, detectedLanguage }));
-    return { translatedText, detectedLanguage, tokens };
+    return { translatedText, detectedLanguage, tokens, cacheHit: false };
   }
 
   async analyze(
@@ -92,15 +103,15 @@ export class GeminiService {
     content: string,
     updatedAt: number,
     task: AnalysisTask = 'review',
-  ): Promise<AnalysisResult & { tokens: number }> {
+  ): Promise<AnalysisResult & { tokens: number; cacheHit: boolean }> {
     const cacheKey = `${articleId}:${updatedAt}:analyze:${task}`;
     const cached = this.fromCache(cacheKey);
-    if (cached !== null) return { ...(JSON.parse(cached) as AnalysisResult), tokens: 0 };
+    if (cached !== null) return { ...(JSON.parse(cached) as AnalysisResult), tokens: 0, cacheHit: true };
 
     this.enforceRateLimit();
     const result = await this.callGeminiAnalyze(content, task);
     this.toCache(cacheKey, JSON.stringify(result));
-    return result;
+    return { ...result, cacheHit: false };
   }
 
   async generate(prompt: string): Promise<{ text: string; tokens: number }> {
@@ -108,6 +119,27 @@ export class GeminiService {
     const { text, tokens } = await this.callGeminiRaw(prompt);
     if (!text) {
       this.logger.error('Gemini API returned empty content for generate');
+      throw new ServiceUnavailableError(
+        'AI service returned an empty response — please try again later',
+      );
+    }
+    return { text, tokens };
+  }
+
+  async generateWithHistory(
+    prompt: string,
+    history: ConversationTurn[],
+  ): Promise<{ text: string; tokens: number }> {
+    this.enforceRateLimit();
+    const contents: GeminiContent[] = [
+      ...history.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] })),
+      { role: 'user' as const, parts: [{ text: prompt }] },
+    ];
+    const { text, tokens } = await this.callGeminiRequest(
+      JSON.stringify({ contents }),
+    );
+    if (!text) {
+      this.logger.error('Gemini API returned empty content for generate with history');
       throw new ServiceUnavailableError(
         'AI service returned an empty response — please try again later',
       );
@@ -255,9 +287,14 @@ export class GeminiService {
   }
 
   private async callGeminiRaw(prompt: string): Promise<{ text: string; tokens: number }> {
+    return this.callGeminiRequest(
+      JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    );
+  }
+
+  private async callGeminiRequest(requestBody: string): Promise<{ text: string; tokens: number }> {
     // NOTE: URL contains the API key — never log it
     const url = `${this.baseUrl}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-    const requestBody = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
     const MAX_RETRIES = 3;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

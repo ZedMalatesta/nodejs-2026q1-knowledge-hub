@@ -7,10 +7,19 @@ import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
 import { AnalyzeArticleDto } from './dto/analyze-article.dto';
 import { GenerateDto } from './dto/generate.dto';
+import { ConversationTurn } from './gemini.service';
+
+interface Session {
+  history: ConversationTurn[];
+  lastAccessedAt: number;
+}
+
+const SESSION_TTL_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
+  private readonly sessions = new Map<string, Session>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -37,13 +46,14 @@ export class AiService {
       `Summarizing article id=${articleId} maxLength=${dto.maxLength ?? 'medium'}`,
     );
 
-    const { summary, tokens } = await this.gemini.summarize(
+    const start = Date.now();
+    const { summary, tokens, cacheHit } = await this.gemini.summarize(
       articleId,
       article.content,
       updatedAt,
       dto.maxLength ?? 'medium',
     );
-    this.usage.track('summarize', tokens);
+    this.usage.track('summarize', tokens, cacheHit, Date.now() - start);
 
     return {
       articleId,
@@ -72,7 +82,8 @@ export class AiService {
       `Translating article id=${articleId} target=${dto.targetLanguage}`,
     );
 
-    const { translatedText, detectedLanguage, tokens } =
+    const start = Date.now();
+    const { translatedText, detectedLanguage, tokens, cacheHit } =
       await this.gemini.translate(
         articleId,
         article.content,
@@ -80,7 +91,7 @@ export class AiService {
         dto.targetLanguage,
         dto.sourceLanguage,
       );
-    this.usage.track('translate', tokens);
+    this.usage.track('translate', tokens, cacheHit, Date.now() - start);
 
     return { articleId, translatedText, detectedLanguage };
   }
@@ -104,25 +115,64 @@ export class AiService {
       `Analyzing article id=${articleId} task=${dto.task ?? 'review'}`,
     );
 
-    const { analysis, suggestions, severity, tokens } =
+    const start = Date.now();
+    const { analysis, suggestions, severity, tokens, cacheHit } =
       await this.gemini.analyze(
         articleId,
         article.content,
         updatedAt,
         dto.task ?? 'review',
       );
-    this.usage.track('analyze', tokens);
+    this.usage.track('analyze', tokens, cacheHit, Date.now() - start);
 
     return { articleId, analysis, suggestions, severity };
   }
 
   async generate(dto: GenerateDto) {
     this.logger.debug(
-      `Free-form generate request promptLength=${dto.prompt.length}`,
+      `Free-form generate request promptLength=${dto.prompt.length}` +
+        (dto.sessionId ? ` sessionId=${dto.sessionId}` : ''),
     );
-    const { text, tokens } = await this.gemini.generate(dto.prompt);
-    this.usage.track('generate', tokens);
-    return { result: text, tokens };
+
+    const start = Date.now();
+    let text: string;
+    let tokens: number;
+
+    if (dto.sessionId) {
+      const history = this.getOrCreateSession(dto.sessionId);
+      ({ text, tokens } = await this.gemini.generateWithHistory(
+        dto.prompt,
+        history,
+      ));
+      history.push({ role: 'user', text: dto.prompt });
+      history.push({ role: 'model', text });
+    } else {
+      ({ text, tokens } = await this.gemini.generate(dto.prompt));
+    }
+
+    this.usage.track('generate', tokens, false, Date.now() - start);
+    return {
+      result: text,
+      tokens,
+      ...(dto.sessionId ? { sessionId: dto.sessionId } : {}),
+    };
+  }
+
+  private getOrCreateSession(sessionId: string): ConversationTurn[] {
+    const now = Date.now();
+    for (const [id, session] of this.sessions) {
+      if (now - session.lastAccessedAt > SESSION_TTL_MS) {
+        this.sessions.delete(id);
+      }
+    }
+    const existing = this.sessions.get(sessionId);
+    if (existing) {
+      existing.lastAccessedAt = now;
+      return existing.history;
+    }
+    const session: Session = { history: [], lastAccessedAt: now };
+    this.sessions.set(sessionId, session);
+    return session.history;
   }
 
   getUsage() {
