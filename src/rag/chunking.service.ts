@@ -28,7 +28,6 @@ export class ChunkingService {
         break;
       }
 
-      // Snap end back to the nearest whitespace to avoid cutting mid-word
       let end = rawEnd;
       while (end > pos && normalized[end] !== ' ' && normalized[end] !== '\n') {
         end--;
