@@ -26,6 +26,20 @@ interface Conversation {
   lastAccessedAt: number;
 }
 
+function buildFilter(opts: {
+  articleStatus?: string;
+  categoryId?: string;
+  tags?: string[];
+}): Record<string, unknown> | undefined {
+  const must: Record<string, unknown>[] = [];
+  if (opts.articleStatus)
+    must.push({ key: 'status', match: { value: opts.articleStatus } });
+  if (opts.categoryId)
+    must.push({ key: 'categoryId', match: { value: opts.categoryId } });
+  if (opts.tags?.length) must.push({ key: 'tags', match: { any: opts.tags } });
+  return must.length ? { must } : undefined;
+}
+
 function chunkPointId(articleId: string, chunkIndex: number): string {
   const hash = createHash('md5')
     .update(`${articleId}:${chunkIndex}`)
@@ -109,8 +123,25 @@ export class RagService {
     };
   }
 
-  async search(_dto: SearchRagDto) {
-    return { results: [] };
+  async search(dto: SearchRagDto) {
+    const { query, limit = 5, articleStatus, categoryId, tags } = dto;
+
+    await this.qdrant.ensureCollection(this.embedding.dimension);
+
+    const queryVector = await this.embedding.embed(query);
+
+    const filter = buildFilter({ articleStatus, categoryId, tags });
+
+    const hits = await this.qdrant.search(queryVector, limit, filter);
+
+    return {
+      results: hits.map((h) => ({
+        articleId: h.payload.articleId as string,
+        articleTitle: h.payload.title as string,
+        chunk: h.payload.chunkText as string,
+        similarity: h.score,
+      })),
+    };
   }
 
   async chat(_dto: ChatRagDto) {
