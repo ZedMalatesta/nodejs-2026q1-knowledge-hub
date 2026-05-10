@@ -44,7 +44,9 @@ export class RagController {
   }
 
   @Get('chat/:conversationId/history')
-  getHistory(@Param('conversationId', new ParseUuidPipe()) conversationId: string) {
+  getHistory(
+    @Param('conversationId', new ParseUuidPipe()) conversationId: string,
+  ) {
     return this.ragService.getConversationHistory(conversationId);
   }
 }
