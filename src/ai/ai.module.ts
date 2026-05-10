@@ -9,5 +9,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [AiController],
   providers: [AiService, GeminiService, AiUsageService],
+  exports: [GeminiService],
 })
 export class AiModule {}

@@ -1,13 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChunkingService } from './chunking.service';
 import { EmbeddingService } from './embedding.service';
 import { QdrantService, VectorPoint } from './qdrant.service';
+import { GeminiService } from '../ai/gemini.service';
 import { NotFoundError } from '../errors/http.errors';
 import { IndexRagDto } from './dto/index-rag.dto';
 import { SearchRagDto } from './dto/search-rag.dto';
 import { ChatRagDto } from './dto/chat-rag.dto';
+import { buildRagPrompt, ContextChunk } from './prompts/rag.prompts';
 
 const COLLECTION =
   process.env.RAG_VECTOR_COLLECTION ?? 'knowledge_hub_articles';
@@ -16,7 +18,7 @@ const MAX_MESSAGES = parseInt(
   10,
 );
 
-interface ConversationMessage {
+export interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
 }
@@ -63,6 +65,7 @@ export class RagService {
     private readonly chunking: ChunkingService,
     private readonly embedding: EmbeddingService,
     private readonly qdrant: QdrantService,
+    private readonly gemini: GeminiService,
   ) {}
 
   async index(dto: IndexRagDto) {
@@ -144,8 +147,37 @@ export class RagService {
     };
   }
 
-  async chat(_dto: ChatRagDto) {
-    return { answer: '', sources: [], conversationId: '' };
+  async chat(dto: ChatRagDto) {
+    const conversationId = dto.conversationId ?? randomUUID();
+    const { question } = dto;
+
+    await this.qdrant.ensureCollection(this.embedding.dimension);
+
+    const queryVector = await this.embedding.embed(question);
+    const hits = await this.qdrant.search(queryVector, 5);
+
+    const chunks: ContextChunk[] = hits.map((h) => ({
+      articleId: h.payload.articleId as string,
+      articleTitle: h.payload.title as string,
+      chunk: h.payload.chunkText as string,
+    }));
+
+    const history = this.getOrCreateConversation(conversationId);
+    const prompt = buildRagPrompt(question, chunks, history);
+
+    const { text: answer } = await this.gemini.generate(prompt);
+
+    this.appendMessages(conversationId, question, answer);
+
+    return {
+      answer,
+      sources: chunks.map((c) => ({
+        articleId: c.articleId,
+        articleTitle: c.articleTitle,
+        relevantChunk: c.chunk,
+      })),
+      conversationId,
+    };
   }
 
   async deleteArticleFromIndex(articleId: string): Promise<void> {
