@@ -25,7 +25,8 @@ interface QdrantSearchResponse {
 export class QdrantService {
   private readonly logger = new Logger(QdrantService.name);
 
-  private readonly url = process.env.RAG_VECTOR_DB_URL ?? 'http://localhost:6333';
+  private readonly url =
+    process.env.RAG_VECTOR_DB_URL ?? 'http://localhost:6333';
   private readonly collection =
     process.env.RAG_VECTOR_COLLECTION ?? 'knowledge_hub_articles';
 
@@ -36,12 +37,16 @@ export class QdrantService {
     await this.fetch(`/collections/${this.collection}`, 'PUT', {
       vectors: { size: dimension, distance: 'Cosine' },
     });
-    this.logger.log(`Created Qdrant collection "${this.collection}" dim=${dimension}`);
+    this.logger.log(
+      `Created Qdrant collection "${this.collection}" dim=${dimension}`,
+    );
   }
 
   async upsert(points: VectorPoint[]): Promise<void> {
     if (!points.length) return;
-    await this.fetch(`/collections/${this.collection}/points`, 'PUT', { points });
+    await this.fetch(`/collections/${this.collection}/points`, 'PUT', {
+      points,
+    });
   }
 
   async search(
@@ -93,13 +98,19 @@ export class QdrantService {
       if (response.status === 404) return false;
       if (response.ok) return true;
       const text = await response.text().catch(() => '');
-      this.logger.error(`Qdrant check collection error ${response.status}: ${text}`);
-      throw new ServiceUnavailableError('Vector database is currently unavailable');
+      this.logger.error(
+        `Qdrant check collection error ${response.status}: ${text}`,
+      );
+      throw new ServiceUnavailableError(
+        'Vector database is currently unavailable',
+      );
     } catch (err) {
       if (err instanceof ServiceUnavailableError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Qdrant unreachable at ${this.url}: ${msg}`);
-      throw new ServiceUnavailableError('Vector database is currently unavailable');
+      throw new ServiceUnavailableError(
+        'Vector database is currently unavailable',
+      );
     }
   }
 
@@ -119,12 +130,16 @@ export class QdrantService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Qdrant unreachable at ${this.url}${path}: ${msg}`);
-      throw new ServiceUnavailableError('Vector database is currently unavailable');
+      throw new ServiceUnavailableError(
+        'Vector database is currently unavailable',
+      );
     }
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      this.logger.error(`Qdrant ${method} ${path} → ${response.status}: ${text}`);
+      this.logger.error(
+        `Qdrant ${method} ${path} → ${response.status}: ${text}`,
+      );
       throw new ServiceUnavailableError(
         `Vector database error (${response.status}) — please try again later`,
       );

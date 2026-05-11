@@ -14,6 +14,7 @@ A RESTful API built with NestJS, PostgreSQL, and Prisma. Supports JWT authentica
 - [Running the Application](#running-the-application)
 - [API Documentation](#api-documentation)
 - [AI Integration (Gemini)](#ai-integration-gemini)
+- [RAG Integration (Qdrant)](#rag-integration-qdrant)
 - [Testing](#testing)
 - [Logging](#logging)
 - [Linting & Formatting](#linting--formatting)
@@ -53,7 +54,7 @@ cp .env.example .env
 Open `.env` and make sure `DATABASE_URL` points to your local Postgres instance.  
 The default already uses `localhost`, so if you have Postgres running locally with default credentials no change is needed:
 
-```
+```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/knowledge_hub?schema=public"
 ```
 
@@ -68,8 +69,8 @@ npm run db:seed
 npm start
 ```
 
-The API is now available at **http://localhost:4000**.  
-Swagger docs are at **http://localhost:4000/doc**.
+The API is now available at **<http://localhost:4000>**.  
+Swagger docs are at **<http://localhost:4000/doc>**.
 
 ---
 
@@ -92,8 +93,8 @@ npm run docker:run
 > No need to edit `DATABASE_URL` for Docker — `docker-compose.yml` automatically uses `db` as the hostname inside the container, regardless of what is in your `.env`.
 > Migrations run automatically on every container start via the entrypoint script.
 
-The API is now available at **http://localhost:4000**.  
-Swagger docs are at **http://localhost:4000/doc**.
+The API is now available at **<http://localhost:4000>**.  
+Swagger docs are at **<http://localhost:4000/doc>**.
 
 To stop everything:
 
@@ -177,7 +178,7 @@ curl -X POST http://localhost:4000/auth/admin-create \
 
 ## API Documentation
 
-Interactive Swagger UI is available at **http://localhost:4000/doc** whenever the app is running.
+Interactive Swagger UI is available at **<http://localhost:4000/doc>** whenever the app is running.
 
 All endpoints require a **Bearer token** in the `Authorization` header except:
 
@@ -200,7 +201,10 @@ All endpoints require a **Bearer token** in the `Authorization` header except:
 
 ## AI Integration (Gemini)
 
-The API includes AI-powered endpoints backed by the **Google Gemini API** (model: `gemini-2.0-flash`).
+The API includes AI-powered endpoints backed by the **Google Gemini API**.
+
+- **Text generation** uses `gemini-2.0-flash` for summarization, translation, analysis, and free-form prompts.
+- **Embeddings** use `text-embedding-004` (768 dimensions) for the RAG pipeline — see [RAG Integration (Qdrant)](#rag-integration-qdrant).
 
 ### Obtaining a Gemini API key
 
@@ -221,7 +225,8 @@ The free tier provides sufficient quota for development and testing.
 | -------- | ----------- | ------- |
 | `GEMINI_API_KEY` | Your Gemini API key | *(required)* |
 | `GEMINI_API_BASE_URL` | Gemini API base URL | `https://generativelanguage.googleapis.com` |
-| `GEMINI_MODEL` | Model name | `gemini-2.0-flash` |
+| `GEMINI_MODEL` | Generation model name | `gemini-2.0-flash` |
+| `GEMINI_EMBEDDING_MODEL` | Embedding model name | `text-embedding-004` |
 | `AI_RATE_LIMIT_RPM` | Max AI requests per minute | `20` |
 | `AI_CACHE_TTL_SEC` | In-memory cache TTL in seconds | `300` |
 
@@ -263,6 +268,84 @@ curl http://localhost:4000/ai/usage \
 - **Latency**: Gemini responses typically take 1–5 seconds per request. Cached responses (summarize, translate, analyze) return instantly on repeat calls within the TTL window.
 - **Regional availability**: The Gemini API may not be available in all regions. If you receive persistent 403 errors, check [Google's availability page](https://ai.google.dev/gemini-api/docs/available-regions) or use a VPN.
 - **In-memory cache and usage stats**: Both are reset on every server restart. They are not shared across multiple instances.
+
+---
+
+## RAG Integration (Qdrant)
+
+The API includes a Retrieval-Augmented Generation (RAG) pipeline that lets you index article content into a vector database and query it with natural language.
+
+- **Embeddings**: `text-embedding-004` via the Gemini API (768-dimensional vectors, cosine similarity).
+- **Generation**: `gemini-2.0-flash` grounds its answers in the retrieved article chunks.
+- **Vector database**: [Qdrant](https://qdrant.tech/) — started automatically by Docker Compose alongside the API and Postgres.
+
+### RAG environment variables
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `GEMINI_EMBEDDING_MODEL` | Gemini embedding model | `text-embedding-004` |
+| `RAG_VECTOR_DB_URL` | Qdrant base URL | `http://vectordb:6333` (Docker) |
+| `RAG_VECTOR_COLLECTION` | Qdrant collection name | `knowledge_hub_articles` |
+| `RAG_CHUNK_SIZE` | Characters per text chunk | `800` |
+| `RAG_CHUNK_OVERLAP` | Overlap between consecutive chunks | `200` |
+| `RAG_CONVERSATION_MAX_MESSAGES` | Max messages kept per conversation | `20` |
+
+> When running locally without Docker, set `RAG_VECTOR_DB_URL=http://localhost:6333` in `.env` and start Qdrant separately (`docker run -p 6333:6333 qdrant/qdrant`).
+
+### RAG endpoints
+
+All RAG endpoints require a valid Bearer token. Index and delete operations require the **admin** role.
+
+| Method | Path | Role | Description |
+| ------ | ---- | ---- | ----------- |
+| `POST` | `/rag/index` | admin | Embed and store articles in Qdrant |
+| `POST` | `/rag/search` | any | Semantic search over indexed chunks |
+| `POST` | `/rag/chat` | any | Ask a question; get a grounded answer |
+| `DELETE` | `/rag/index/articles/:articleId` | admin | Remove an article's vectors from the index |
+| `GET` | `/rag/chat/:conversationId/history` | any | Retrieve conversation message history |
+
+### Full startup flow (after clone)
+
+```bash
+# 1. Copy the environment file and set your Gemini API key
+cp .env.example .env
+# Edit .env — set GEMINI_API_KEY=AIza...your-key-here...
+
+# 2. Build and start all services (API + Postgres + Qdrant)
+npm run docker:run
+
+# 3. Index published articles into Qdrant (replace TOKEN with a valid admin JWT)
+curl -X POST http://localhost:4000/rag/index \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"onlyPublished": true}'
+
+# 4. Semantic search
+curl -X POST http://localhost:4000/rag/search \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "dependency injection patterns", "limit": 3}'
+
+# 5. Conversational Q&A
+curl -X POST http://localhost:4000/rag/chat \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the knowledge hub about?"}'
+
+# 6. Continue the conversation (use conversationId from the previous response)
+curl -X POST http://localhost:4000/rag/chat \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Can you give an example?", "conversationId": "CONVERSATION_ID"}'
+```
+
+### RAG known limitations
+
+- **Indexing time**: Embedding is done via the Gemini API — a large library (hundreds of articles) can take tens of seconds due to per-request latency and the 100-text batch limit. Re-indexing an article is idempotent (old vectors are deleted first).
+- **Free-tier embedding quota**: `text-embedding-004` shares the Gemini free-tier quota (~15 req/min, 1 500 req/day). Heavy indexing may trigger 429 errors; the service retries up to 3 times with exponential backoff.
+- **Qdrant persistence**: In Docker Compose the Qdrant data volume (`qdrantdata`) persists between restarts. If you remove the volume (`docker-compose down -v`) the index is wiped and must be rebuilt.
+- **In-memory conversation history**: Conversation sessions are stored in process memory and lost on restart. They are not shared across multiple API instances.
+- **Regional availability**: The Gemini embedding API has the same regional restrictions as the generation API. Persistent 403 errors indicate a regional block — use a VPN or check [Google's availability page](https://ai.google.dev/gemini-api/docs/available-regions).
 
 ---
 
@@ -344,10 +427,10 @@ Services started:
 
 | Service | URL |
 | ------- | --- |
-| API | http://localhost:4000 |
-| Swagger | http://localhost:4000/doc |
+| API | <http://localhost:4000> |
+| Swagger | <http://localhost:4000/doc> |
 | Postgres | `localhost:5432` (host machine) |
-| Adminer (DB UI) | http://localhost:8080 — only with `--profile debug` |
+| Adminer (DB UI) | <http://localhost:8080> — only with `--profile debug` |
 
 Run Adminer for database inspection:
 

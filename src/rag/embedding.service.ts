@@ -18,7 +18,8 @@ export class EmbeddingService {
 
   private readonly apiKey = process.env.GEMINI_API_KEY ?? '';
   private readonly baseUrl =
-    process.env.GEMINI_API_BASE_URL ?? 'https://generativelanguage.googleapis.com';
+    process.env.GEMINI_API_BASE_URL ??
+    'https://generativelanguage.googleapis.com';
   private readonly model =
     process.env.GEMINI_EMBEDDING_MODEL ?? 'text-embedding-004';
 
@@ -75,8 +76,12 @@ export class EmbeddingService {
   ): Promise<R> {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       if (attempt > 0) {
-        await new Promise<void>((r) => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
-        this.logger.warn(`Retrying embedding API (attempt ${attempt}/${MAX_RETRIES})`);
+        await new Promise<void>((r) =>
+          setTimeout(r, Math.pow(2, attempt - 1) * 1000),
+        );
+        this.logger.warn(
+          `Retrying embedding API (attempt ${attempt}/${MAX_RETRIES})`,
+        );
       }
 
       const controller = new AbortController();
@@ -129,7 +134,9 @@ export class EmbeddingService {
 
       if (response.status === 429) {
         if (attempt < MAX_RETRIES) continue;
-        this.logger.error('Embedding upstream rate limit persists after all retries');
+        this.logger.error(
+          'Embedding upstream rate limit persists after all retries',
+        );
         throw new ServiceUnavailableError(
           'Embedding service is temporarily overloaded — please try again later',
         );
